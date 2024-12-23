@@ -1,0 +1,23 @@
+{
+  "pageTitle": "About - ThymeLab",
+  "title": "About ThymeLab",
+  "description": "A development tool designed to streamline your Thymeleaf template development process.",
+  "features": [
+    {
+      "title": "Template Preview",
+      "description": "Real-time preview of Thymeleaf templates with dynamic data binding and hot reload."
+    },
+    {
+      "title": "Project Structure",
+      "description": "Organized project structure with separate directories for templates, fragments, and static resources."
+    },
+    {
+      "title": "Data Binding",
+      "description": "Flexible data binding system using JSON files for both global and page-specific template variables."
+    },
+    {
+      "title": "Easy Installation",
+      "description": "Simple setup process with the ThymeLab Launcher, no complex configuration required."
+    }
+  ]
+} 

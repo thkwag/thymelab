@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default}">
+<head>
+    <title th:text="${pageTitle}">About ThymeLab</title>
+</head>
+<body>
+    <main layout:fragment="content">
+        <div class="about-section">
+            <h1 th:text="${title}">About ThymeLab</h1>
+            <p th:text="${description}" class="about-description">A powerful development tool for Thymeleaf templates</p>
+        </div>
+        
+        <div class="features">
+            <div th:each="feature : ${features}" class="feature-card">
+                <h3 th:text="${feature.title}">Feature Title</h3>
+                <p th:text="${feature.description}">Feature Description</p>
+            </div>
+        </div>
+    </main>
+</body>
+</html> 

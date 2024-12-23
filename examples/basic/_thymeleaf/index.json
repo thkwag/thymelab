@@ -1,0 +1,7 @@
+{
+  "pageTitle": "Welcome - ThymeLab",
+  "welcome": {
+    "title": "Welcome to ThymeLab",
+    "description": "A development tool for Thymeleaf templates"
+  }
+} 

@@ -1,0 +1,280 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'  # Semantic versioning tags only
+
+env:
+  JAVA_VERSION: '17'
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+
+jobs:
+  build-jar:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: ${{ env.JAVA_VERSION }}
+        cache: 'gradle'
+
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
+
+    - name: Set version
+      run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+    - name: Debug version
+      run: echo "VERSION is set to ${{ env.VERSION }}"
+
+    - name: List projects
+      run: ./gradlew projects
+
+    - name: List available tasks
+      working-directory: modules/launcher
+      run: |
+        ${{ github.workspace }}/gradlew tasks --all
+        ${{ github.workspace }}/gradlew properties
+
+    - name: Build Launcher JAR
+      working-directory: modules/launcher
+      run: |
+        ${{ github.workspace }}/gradlew clean jar -Pversion=${{ env.VERSION }} --stacktrace || {
+          echo "Build failed. Checking logs..."
+          find . -name "*.log" -type f -exec cat {} \;
+          exit 1
+        }
+
+    - name: Build Processor JAR
+      working-directory: modules/processor
+      run: |
+        ${{ github.workspace }}/gradlew clean bootJar -Pversion=${{ env.VERSION }} --stacktrace || {
+          echo "Build failed. Checking logs..."
+          find . -name "*.log" -type f -exec cat {} \;
+          exit 1
+        }
+
+    - name: Prepare distribution
+      run: |
+        # Create distribution directory structure
+        DIST_DIR="thymelab-${{ env.VERSION }}"
+        mkdir -p "${DIST_DIR}/lib"
+        
+        # Copy launcher JAR to root directory
+        cp "modules/launcher/build/libs/thymelab-launcher-${{ env.VERSION }}.jar" "${DIST_DIR}/"
+        
+        # Copy processor JAR to lib directory
+        cp "modules/processor/build/libs/thymelab-processor-${{ env.VERSION }}.jar" "${DIST_DIR}/lib/"
+        
+        # List directory structure for verification
+        echo "Distribution directory structure:"
+        tree "${DIST_DIR}" || ls -R "${DIST_DIR}"
+        
+        # Create ZIP archive
+        zip -r "thymelab-${{ env.VERSION }}.zip" "${DIST_DIR}"
+
+    - name: Upload JAR artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: jar
+        path: thymelab-${{ env.VERSION }}.zip
+        retention-days: 5
+
+  package-examples:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set version
+      run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+    - name: Create examples archive
+      run: |
+        if [ ! -d "examples" ]; then
+          echo "Examples directory not found"
+          exit 1
+        fi
+        zip -r "thymelab-examples-${{ env.VERSION }}.zip" examples/
+
+    - name: Upload examples artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: examples
+        path: thymelab-examples-*.zip
+        retention-days: 5
+
+  build-installers:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # os: [macos-latest, windows-latest]
+        os: [windows-latest]
+        include:
+          # - os: macos-latest
+          #   installer_ext: "pkg"
+          #   alt_installer_ext: "dmg"
+          - os: windows-latest
+            installer_ext: "exe"
+            alt_installer_ext: "msi"
+      fail-fast: false
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: ${{ env.JAVA_VERSION }}
+        cache: 'gradle'
+
+    - name: Set version (Unix)
+      if: runner.os != 'Windows'
+      run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+    - name: Set version (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: echo "VERSION=$($env:GITHUB_REF_NAME -replace '^v','')" >> $env:GITHUB_ENV
+
+    - name: Make gradlew executable (macOS)
+      if: runner.os == 'macOS'
+      run: chmod +x ./gradlew
+
+    - name: Create installer (macOS)
+      if: runner.os == 'macOS'
+      working-directory: modules/launcher
+      run: |
+        ${{ github.workspace }}/gradlew createInstaller -Pos=mac -Pversion=${{ env.VERSION }} --stacktrace || {
+          echo "Installer creation failed. Checking logs..."
+          find . -name "*.log" -type f -exec cat {} \;
+          exit 1
+        }
+        mkdir -p installers
+        found=0
+        for ext in pkg dmg; do
+          if find build/dist -name "ThymeLab*.$ext" -exec cp {} installers/ \;; then
+            found=1
+          fi
+        done
+        if [ $found -eq 0 ]; then
+          echo "No installer files found"
+          exit 1
+        fi
+        ls -la installers/
+
+    - name: List build/dist contents (macOS)
+      if: runner.os == 'macOS'
+      working-directory: modules/launcher
+      run: ls -la build/dist
+
+    - name: Create installer (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      working-directory: modules/launcher
+      run: |
+        try {
+          & ${{ github.workspace }}/gradlew.bat createInstaller "-Pos=windows" "-Pversion=${{ env.VERSION }}" --stacktrace
+        } catch {
+          Write-Host "Installer creation failed. Checking logs..."
+          Get-ChildItem -Recurse -Filter *.log | Get-Content
+          exit 1
+        }
+        New-Item -ItemType Directory -Force -Path installers
+        $found = $false
+        foreach ($ext in @("exe", "msi")) {
+          $files = Get-ChildItem "build/dist/ThymeLab*.$ext"
+          if ($files) {
+            Copy-Item $files.FullName installers/
+            $found = $true
+          }
+        }
+        if (-not $found) {
+          Write-Host "No installer files found"
+          exit 1
+        }
+        Get-ChildItem installers/
+
+    - name: List build/dist contents (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      working-directory: modules/launcher
+      run: Get-ChildItem build/dist
+
+    - name: Upload installer artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: installer-${{ runner.os }}
+        path: |
+          modules/launcher/installers/ThymeLab*.${{ matrix.installer_ext }}
+          modules/launcher/installers/ThymeLab*.${{ matrix.alt_installer_ext }}
+        retention-days: 5
+
+  release:
+    needs: [build-jar, package-examples, build-installers]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Set version
+      run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+
+    - name: Display structure of downloaded files
+      run: ls -R
+
+    - name: Verify artifacts
+      run: |
+        for file in jar/thymelab-${{ env.VERSION }}.zip \
+                    examples/thymelab-examples-${{ env.VERSION }}.zip \
+                    installer-Windows/ThymeLab*; do
+          if ! ls $file 1> /dev/null 2>&1; then
+            echo "Missing artifact: $file"
+            exit 1
+          fi
+        done
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: ThymeLab ${{ github.ref_name }}
+        body: |
+          ## ThymeLab ${{ github.ref_name }}
+
+          ### Downloads
+          - **ThymeLab**: Complete package including launcher and processor (requires Java ${{ env.JAVA_VERSION }})
+          - **Examples**: Template examples and resources
+          - **Windows Installer**: Native installer for Windows
+
+          ### Installation
+          - **Windows**: Run the ThymeLab-Setup.exe installer
+          - **macOS**: Due to Apple Developer ID requirements, macOS users need to build the installer locally:
+            ```bash
+            git clone https://github.com/thkwag/thymelab.git
+            cd thymelab
+            ./gradlew :modules:launcher:createInstaller -Pos=mac
+            ```
+            The installer will be created in `modules/launcher/build/dist/`
+          - **Other OS**: Download the ThymeLab ZIP file and run the launcher JAR with Java ${{ env.JAVA_VERSION }} or higher
+
+          ### Note
+          The examples package contains template examples that can be used with any installation method.
+        files: |
+          jar/thymelab-${{ env.VERSION }}.zip
+          examples/thymelab-examples-${{ env.VERSION }}.zip
+          installer-Windows/ThymeLab*
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

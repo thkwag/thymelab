@@ -1,0 +1,16 @@
+rootProject.name = 'thymelab'
+
+// Include only direct subprojects
+include ':modules:launcher'
+include ':modules:processor'
+
+// Disable modules project
+gradle.projectsLoaded { gradle ->
+    gradle.rootProject.subprojects { project ->
+        if (project.path == ':modules') {
+            project.tasks.configureEach { task ->
+                task.enabled = false
+            }
+        }
+    }
+}

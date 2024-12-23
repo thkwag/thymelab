@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}"
+      th:with="title='Status', pretitle='System'">
+<head>
+    <title>ThymeLab</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="row row-deck row-cards">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="subheader">System Status</div>
+                            <div class="ms-auto lh-1">
+                                <div class="badge bg-success">Active</div>
+                            </div>
+                        </div>
+                        <div class="h1 mb-3 mt-2" th:text="|${appName} is running|">ThymeLab is running</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
