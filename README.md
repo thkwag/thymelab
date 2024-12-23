@@ -6,6 +6,10 @@
 
 ThymeLab is a development tool that enables designers and developers to create and test Thymeleaf templates without setting up a backend system. It consists of two main modules:
 
+<p align="center">
+   <img src="docs/images/thymelab-launcher.png" alt="ThymeLab Preview">
+</p>
+
 ## Key Features
 
 ### Easy Template Development
