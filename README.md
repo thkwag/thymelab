@@ -2,7 +2,7 @@
   <img src="docs/images/thymelab.png" alt="ThymeLab Logo">
 </p>
 
-<h1 align="center">ThymeLab - Design faster. Preview instantly.</h1>
+<h1 align="center">ThymeLab - Thymeleaf Templates, Instantly Previewed</h1>
 
 ThymeLab is a development tool that enables designers and developers to create and test Thymeleaf templates without setting up a backend system. It consists of two main modules:
 
