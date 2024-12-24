@@ -2,6 +2,10 @@
 
 ThymeLab Processor is a development tool that enables designers and developers to create and test Thymeleaf templates without setting up a backend system. It provides real-time hot reload capabilities, making the template development process faster and more efficient.
 
+<p align="center">
+   <img src="../../docs/images/thymelab-processor.png" alt="ThymeLab Preview">
+</p>
+
 ## Key Features
 
 - **No Backend Required**: Create and test Thymeleaf templates without implementing a backend system

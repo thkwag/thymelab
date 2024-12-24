@@ -2,6 +2,10 @@
 
 ThymeLab Launcher is a desktop application that provides a user-friendly interface for running and managing the ThymeLab Processor. It eliminates the need for manual Java environment setup and command-line operations.
 
+<p align="center">
+   <img src="../../docs/images/thymelab-launcher.png" alt="ThymeLab Preview">
+</p>
+
 ## Features
 
 ### Easy Setup and Operation
@@ -23,24 +27,110 @@ ThymeLab Launcher is a desktop application that provides a user-friendly interfa
 - **Internationalization**: English and Korean language support
 - **Font Customization**: Adjustable log display font and size
 
-## Installation
+## Installation & Running
 
 ### Windows
-1. Download `ThymeLab-x.x.x.exe`
+
+#### Option 1: Using Installer (Recommended)
+1. Download `ThymeLab-x.x.x.exe` from the latest release
 2. Run the installer
 3. Follow the installation wizard
-4. Launch from Start Menu or Desktop shortcut
+   - Choose installation directory
+   - Create desktop shortcut (optional)
+   - Create start menu shortcuts (optional)
+4. Launch from:
+   - Start Menu: ThymeLab
+   - Desktop shortcut (if created)
+   - Installation directory: `ThymeLab.exe`
+
+#### Option 2: Portable ZIP
+1. Download `thymelab-x.x.x.zip`
+2. Extract to desired location
+3. Run `thymeLab-launcher-x.x.x.jar`:
+   - Double-click the JAR file
+   - Or via command line:
+     ```bash
+     java -jar thymeLab-launcher-x.x.x.jar
+     ```
 
 ### macOS
-1. Download `ThymeLab-x.x.x.dmg`
-2. Open the DMG file
-3. Drag ThymeLab to Applications folder
-4. Launch from Applications
+
+#### Option 1: Building Installer
+Due to Apple Developer ID requirements, macOS users need to build the installer:
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/thkwag/thymelab.git
+   cd thymelab
+   ```
+2. Build installer:
+   ```bash
+   ./gradlew :modules:launcher:createInstaller -Pos=mac
+   ```
+3. Find installer in `modules/launcher/build/dist/`
+4. Run the installer
+5. Launch from:
+   - Applications folder
+   - Spotlight: ThymeLab
+   - Command line: `open -a ThymeLab`
+
+#### Option 2: Portable ZIP
+1. Download `thymelab-x.x.x.zip`
+2. Extract to desired location:
+   ```bash
+   unzip thymelab-x.x.x.zip
+   cd thymelab-x.x.x
+   ```
+3. Run the launcher:
+   ```bash
+   java -jar thymeLab-launcher-x.x.x.jar
+   ```
+
+### Linux
+
+#### Using Portable ZIP
+1. Download `thymelab-x.x.x.zip`
+2. Extract and run:
+   ```bash
+   unzip thymelab-x.x.x.zip
+   cd thymelab-x.x.x
+   java -jar thymeLab-launcher-x.x.x.jar
+   ```
+
+#### Creating Desktop Entry (Optional)
+1. Create `thymelab.desktop`:
+   ```ini
+   [Desktop Entry]
+   Type=Application
+   Name=ThymeLab
+   Comment=ThymeLab Launcher
+   Exec=java -jar /path/to/thymeLab-launcher-x.x.x.jar
+   Icon=/path/to/thymelab/icon.png
+   Terminal=false
+   Categories=Development;
+   ```
+2. Move to applications directory:
+   ```bash
+   mv thymelab.desktop ~/.local/share/applications/
+   ```
+
+### System Requirements
+
+#### Windows
+- Windows 10/11 (64-bit)
+- No Java installation required (bundled JVM)
+
+#### macOS
+- macOS 10.14+ (Mojave or later)
+- No Java installation required (bundled JVM)
+
+#### Linux
+- Modern Linux distribution (Ubuntu 20.04+, Fedora 34+, etc.)
+- Java 17 or later required
 
 ## Quick Start Guide
 
 1. **First Launch**
-   - Start ThymeLab from your applications menu
+   - Start ThymeLab using the appropriate method for your OS
    - The main window shows server status and log display
 
 2. **Configure Directories**
@@ -70,26 +160,31 @@ ThymeLab Launcher is a desktop application that provides a user-friendly interfa
 - **Font**: Customize log display font
 - **Font Size**: Adjust log text size
 - **Log Buffer**: Set maximum log lines to display
+<p align="center">
+   <img src="../../docs/images/thymelab-settings-dialog.png" alt="ThymeLab Preview">
+</p>
 
 ### Directory Settings
 - **Templates**: Location of Thymeleaf template files
 - **Static Resources**: Location of web resources
 - **Data**: Location of JSON data files
+<p align="center">
+   <img src="../../docs/images/thymelab-thymeleaf-settings-dialog.png" alt="ThymeLab Preview">
+</p>
 
 ## System Tray Features
 - Minimize to system tray
 - Show/hide main window
 - Exit application
+<p align="center">
+   <img src="../../docs/images/thymelab-tray.png" alt="ThymeLab Preview">
+</p>
 
 ## Integration with ThymeLab Processor
 - Automatically manages processor lifecycle
 - Provides real-time log feedback
 - Handles configuration changes
 - Ensures proper startup and shutdown
-
-## System Requirements
-- Windows 10/11 or macOS 10.14+
-- No additional Java installation required
 
 ## Support
 For issues and questions, please create an issue in the GitHub repository. 
