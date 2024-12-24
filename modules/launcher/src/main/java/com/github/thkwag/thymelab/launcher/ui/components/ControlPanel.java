@@ -1,13 +1,14 @@
 package com.github.thkwag.thymelab.launcher.ui.components;
 
+import com.github.thkwag.thymelab.launcher.config.ConfigManager;
+import com.github.thkwag.thymelab.launcher.ui.dialogs.ActuatorInfoDialog;
+import com.github.thkwag.thymelab.launcher.util.AppLogger;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.Desktop;
 import java.net.URI;
-import com.github.thkwag.thymelab.launcher.config.ConfigManager;
-import com.github.thkwag.thymelab.launcher.ui.dialogs.ActuatorInfoDialog;
 
 public class ControlPanel extends JPanel {
     private JButton startButton;
@@ -28,30 +29,65 @@ public class ControlPanel extends JPanel {
     private JPanel statusIndicator;
     private Timer blinkTimer;
 
+    // Layout constants
+    private static final int BORDER_SPACING = 5;
+    private static final int HORIZONTAL_SPACING = 5;
+    private static final int VERTICAL_SPACING = 0;
+    private static final int TEXT_FIELD_COLUMNS = 5;
+
+    // Status indicator settings
+    private static final int STATUS_INDICATOR_SIZE = 12;
+    private static final int STATUS_INDICATOR_PADDING = 2;
+    private static final int STATUS_INDICATOR_OVAL_PADDING = 4;
+
+    // Color settings
+    private static final Color URL_COLOR = new Color(0, 102, 204);
+    private static final Color STATUS_ERROR_COLOR = new Color(255, 50, 50);
+    private static final Color STATUS_ERROR_BLINK = new Color(180, 0, 0);
+    private static final Color STATUS_SUCCESS_COLOR = new Color(0, 180, 0);
+
+    // Timer settings
+    private static final int BLINK_INTERVAL = 500;
+    private static final int CONNECTION_TIMEOUT = 1000;
+    private static final int READ_TIMEOUT = 1000;
+    private static final int RETRY_INTERVAL = 1000;
+    private static final int MAX_RETRY_COUNT = 30;
+
+    // Default settings
+    private static final int DEFAULT_PORT = 8080;
+    private static final String[] LOG_LEVELS = {"INFO", "DEBUG", "WARN", "ERROR"};
+    private static final String[] SUPPORTED_LANGUAGES = {"EN", "KO"};
+
+    // Endpoint paths
+    private static final String ENDPOINT_ACTUATOR_HEALTH = "/actuator/health";
+    private static final String ENDPOINT_ACTUATOR_LOGGERS = "/actuator/loggers/com.github.thkwag.thymelab";
+    private static final String SERVER_URL_FORMAT = "http://localhost:%d";
+    private static final String ACTUATOR_URL_FORMAT = SERVER_URL_FORMAT + "%s";
+
     public ControlPanel(ConfigManager config) {
         this.config = config;
-        setLayout(new BorderLayout(5, 0));
-        setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        setLayout(new BorderLayout(BORDER_SPACING, VERTICAL_SPACING));
+        setBorder(BorderFactory.createEmptyBorder(BORDER_SPACING, 0, BORDER_SPACING, 0));
         
         initializeComponents();
         layoutComponents();
     }
 
     private void layoutComponents() {
-        setLayout(new BorderLayout(5, 0));
-        setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        setLayout(new BorderLayout(BORDER_SPACING, VERTICAL_SPACING));
+        setBorder(BorderFactory.createEmptyBorder(BORDER_SPACING, 0, BORDER_SPACING, 0));
         
         // Left panel - Start/Stop buttons and URL
-        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, HORIZONTAL_SPACING, VERTICAL_SPACING));
         leftPanel.add(startButton);
         leftPanel.add(stopButton);
-        leftPanel.add(Box.createHorizontalStrut(5));  // Spacing before URL
-        leftPanel.add(Box.createHorizontalStrut(5));
+        leftPanel.add(Box.createHorizontalStrut(HORIZONTAL_SPACING));  // Spacing before URL
+        leftPanel.add(Box.createHorizontalStrut(HORIZONTAL_SPACING));
         leftPanel.add(urlLabel);
         leftPanel.add(statusIndicator);
         
         // Right panel - Log level and clear button
-        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, HORIZONTAL_SPACING, VERTICAL_SPACING));
         rightPanel.add(logLevelLabel);
         rightPanel.add(logLevelCombo);
         rightPanel.add(clearLogButton);
@@ -71,21 +107,21 @@ public class ControlPanel extends JPanel {
         logBufferUnitLabel = new JLabel();
         fontSettingsLabel = new JLabel();
         languageCombo = new JComboBox<>();
-        logBufferField = new JTextField(5);
+        logBufferField = new JTextField(TEXT_FIELD_COLUMNS);
         
         logLevelCombo.removeAllItems();
-        logLevelCombo.addItem("INFO");
-        logLevelCombo.addItem("DEBUG");
-        logLevelCombo.addItem("WARN");
-        logLevelCombo.addItem("ERROR");
+        for (String level : LOG_LEVELS) {
+            logLevelCombo.addItem(level);
+        }
         
-        languageCombo.addItem("EN");
-        languageCombo.addItem("KO");
+        for (String lang : SUPPORTED_LANGUAGES) {
+            languageCombo.addItem(lang);
+        }
         
         // Initialize URL label
         urlLabel = new JLabel();
         urlLabel.setVisible(false);
-        urlLabel.setForeground(new Color(0, 102, 204));
+        urlLabel.setForeground(URL_COLOR);
         urlLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
         urlLabel.setFont(urlLabel.getFont().deriveFont(Font.BOLD));
         urlLabel.addMouseListener(new MouseAdapter() {
@@ -103,6 +139,7 @@ public class ControlPanel extends JPanel {
             String level = (String) logLevelCombo.getSelectedItem();
             if (level != null && logLevelCombo.isEnabled()) {
                 updateLogLevel(level);
+                AppLogger.setLogLevel(level);  // Update local log level
             }
         });
         
@@ -118,10 +155,12 @@ public class ControlPanel extends JPanel {
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(getBackground());
-                g2.fillOval(2, 4, getWidth() - 4, getHeight() - 4);
+                g2.fillOval(STATUS_INDICATOR_PADDING, STATUS_INDICATOR_OVAL_PADDING, 
+                    getWidth() - STATUS_INDICATOR_PADDING * 2, 
+                    getHeight() - STATUS_INDICATOR_PADDING * 2);
             }
         };
-        statusIndicator.setPreferredSize(new Dimension(12, 12));
+        statusIndicator.setPreferredSize(new Dimension(STATUS_INDICATOR_SIZE, STATUS_INDICATOR_SIZE));
         statusIndicator.setOpaque(false);
         statusIndicator.setVisible(false);
         statusIndicator.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -129,7 +168,7 @@ public class ControlPanel extends JPanel {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (statusIndicator.isVisible() && logLevelCombo.isEnabled()) {
-                    int port = config.getInt("server.port", 8080);
+                    int port = config.getInt("server.port", DEFAULT_PORT);
                     ActuatorInfoDialog dialog = new ActuatorInfoDialog(
                         (Frame) SwingUtilities.getWindowAncestor(ControlPanel.this), port);
                     dialog.setVisible(true);
@@ -138,11 +177,11 @@ public class ControlPanel extends JPanel {
         });
         
         // Setup blink timer
-        blinkTimer = new Timer(500, e -> {
+        blinkTimer = new Timer(BLINK_INTERVAL, e -> {
             if (statusIndicator.isVisible()) {
                 statusIndicator.setBackground(
-                    statusIndicator.getBackground().equals(new Color(255, 50, 50)) ? 
-                    new Color(180, 0, 0) : new Color(255, 50, 50)
+                    statusIndicator.getBackground().equals(STATUS_ERROR_COLOR) ? 
+                    STATUS_ERROR_BLINK : STATUS_ERROR_COLOR
                 );
                 statusIndicator.repaint();
             }
@@ -150,11 +189,12 @@ public class ControlPanel extends JPanel {
     }
 
     private void updateLogLevel(String level) {
-        int port = config.getInt("server.port", 8080);
-        URI uri = URI.create(String.format("http://localhost:%d/actuator/loggers/com.github.thkwag.thymelab", port));
+        int port = config.getInt("server.port", DEFAULT_PORT);
+        URI uri = URI.create(String.format(ACTUATOR_URL_FORMAT, port, ENDPOINT_ACTUATOR_LOGGERS));
         
         new Thread(() -> {
             try {
+                AppLogger.debug("Updating log level to: " + level);
                 java.net.HttpURLConnection conn = (java.net.HttpURLConnection) 
                     uri.toURL().openConnection();
                 
@@ -169,59 +209,63 @@ public class ControlPanel extends JPanel {
                 
                 int responseCode = conn.getResponseCode();
                 if (responseCode != 200 && responseCode != 204) {  // Treat 204 as success too
-                    System.err.println("Failed to update log level: " + responseCode);
+                    AppLogger.error("Failed to update log level. Server returned: HTTP " + responseCode);
+                } else {
+                    AppLogger.debug("Log level successfully updated to: " + level);
                 }
                 
             } catch (Exception ex) {
-                System.err.println("Error updating log level: " + ex.getMessage());
+                AppLogger.error("Failed to update log level: " + ex.getMessage(), ex);
             }
         }).start();
     }
 
     private void checkActuatorStatus() {
-        int port = config.getInt("server.port", 8080);
-        URI uri = URI.create(String.format("http://localhost:%d/actuator/health", port));
+        int port = config.getInt("server.port", DEFAULT_PORT);
+        URI uri = URI.create(String.format(ACTUATOR_URL_FORMAT, port, ENDPOINT_ACTUATOR_HEALTH));
         
         new Thread(() -> {
-            for (int i = 0; i < 30; i++) {  // Try for 30 seconds
+            AppLogger.debug("Starting actuator health check...");
+            for (int i = 0; i < MAX_RETRY_COUNT; i++) {  // Try for 30 seconds
                 try {
                     java.net.HttpURLConnection conn = (java.net.HttpURLConnection) 
                         uri.toURL().openConnection();
                     conn.setRequestMethod("GET");
-                    conn.setConnectTimeout(1000);
-                    conn.setReadTimeout(1000);
+                    conn.setConnectTimeout(CONNECTION_TIMEOUT);
+                    conn.setReadTimeout(READ_TIMEOUT);
                     
                     int responseCode = conn.getResponseCode();
                     if (responseCode == 200) {
+                        AppLogger.debug("Actuator health check successful");
                         SwingUtilities.invokeLater(() -> {
                             setLogControlsEnabled(true);
-                            statusIndicator.setBackground(new Color(0, 180, 0));
+                            statusIndicator.setBackground(STATUS_SUCCESS_COLOR);
                             blinkTimer.stop();
                         });
                         return;
                     }
                     // Response code is not 200
-                    System.err.println("Actuator health check failed: HTTP " + responseCode);
+                    AppLogger.debug("Actuator health check failed: HTTP " + responseCode + " (attempt " + (i + 1) + "/" + MAX_RETRY_COUNT + ")");
                     
                 } catch (java.net.ConnectException e) {
-                    System.err.println("Server not yet ready: " + e.getMessage());
+                    AppLogger.debug("Server not yet ready: " + e.getMessage() + " (attempt " + (i + 1) + "/" + MAX_RETRY_COUNT + ")");
                 } catch (Exception e) {
-                    System.err.println("Error checking actuator status: " + e.getMessage());
-                    e.printStackTrace();
+                    AppLogger.error("Error checking actuator status: " + e.getMessage(), e);
                 }
                 
                 try {
-                    Thread.sleep(1000);  // Wait 1 second
+                    Thread.sleep(RETRY_INTERVAL);  // Wait 1 second
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                    AppLogger.debug("Actuator health check interrupted");
                     break;
                 }
             }
             // Connection failed after 30 seconds
-            System.err.println("Actuator health check timed out after 30 seconds");
+            AppLogger.error("Actuator health check timed out after " + (MAX_RETRY_COUNT * RETRY_INTERVAL / 1000) + " seconds");
             SwingUtilities.invokeLater(() -> {
                 setLogControlsEnabled(false);
-                statusIndicator.setBackground(new Color(255, 50, 50));  // Change to red
+                statusIndicator.setBackground(STATUS_ERROR_COLOR);  // Change to red
                 blinkTimer.stop();
             });
         }).start();
@@ -263,14 +307,6 @@ public class ControlPanel extends JPanel {
         fontSettingsLabel.setText(fontText + " / " + sizeText);
     }
 
-    public void showServerUrl(boolean show) {
-        if (show) {
-            int port = config.getInt("server.port", 8080);
-            urlLabel.setText("http://localhost:" + port);
-        }
-        urlLabel.setVisible(show);
-    }
-
     public void setLogControlsEnabled(boolean enabled) {
         logLevelCombo.setEnabled(enabled);
         logLevelLabel.setEnabled(enabled);
@@ -282,17 +318,25 @@ public class ControlPanel extends JPanel {
     }
 
     public void onProcessStarted() {
-        showServerUrl(true);
-        setLogControlsEnabled(false);
+        AppLogger.debug("Application process started");
+        setLogControlsEnabled(false);  // Initially disabled, will be enabled by checkActuatorStatus
+        urlLabel.setVisible(true);
         statusIndicator.setVisible(true);
-        statusIndicator.setBackground(Color.RED);
+        statusIndicator.setBackground(new Color(255, 50, 50));
         blinkTimer.start();
         checkActuatorStatus();
     }
 
+    public void onProcessStarted(String serverUrl) {
+        AppLogger.debug("Application process started at: " + serverUrl);
+        urlLabel.setText(serverUrl);
+        onProcessStarted();
+    }
+
     public void onProcessStopped() {
-        showServerUrl(false);
+        AppLogger.debug("Application process stopped");
         setLogControlsEnabled(false);
+        urlLabel.setVisible(false);
         statusIndicator.setVisible(false);
         blinkTimer.stop();
     }

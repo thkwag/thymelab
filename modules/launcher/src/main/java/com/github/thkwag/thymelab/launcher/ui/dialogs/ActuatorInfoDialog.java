@@ -1,14 +1,15 @@
 package com.github.thkwag.thymelab.launcher.ui.dialogs;
 
+import org.json.JSONObject;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import org.json.JSONObject;
-import java.io.IOException;
 import java.net.URL;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -19,7 +20,7 @@ public class ActuatorInfoDialog extends JDialog {
     private static final int REFRESH_INTERVAL = 1000;
     private final JTextArea textArea;
     private final int port;
-    private Timer refreshTimer;
+    private final Timer refreshTimer;
 
     public ActuatorInfoDialog(Frame owner, int port) {
         super(owner, "Server Health Status", true);

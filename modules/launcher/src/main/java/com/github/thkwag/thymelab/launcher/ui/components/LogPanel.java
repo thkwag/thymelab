@@ -1,20 +1,32 @@
 package com.github.thkwag.thymelab.launcher.ui.components;
 
+import com.github.thkwag.thymelab.launcher.util.AppLogger;
+
 import javax.swing.*;
 import javax.swing.text.*;
 import java.awt.*;
-import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class LogPanel extends JPanel {
-    private JTextPane logTextPane;
-    private JScrollPane logScrollPane;
+    private final JTextPane logTextPane;
     private final StyledDocument styledDoc;
     private final SimpleAttributeSet defaultStyle;
-    private int maxBufferSize = 1000;
+    private int maxBufferSize = DEFAULT_BUFFER_SIZE;
 
+    // Default settings
+    private static final int DEFAULT_BUFFER_SIZE = 1000;
+    private static final int DEFAULT_FONT_SIZE = 12;
+    private static final Color DEFAULT_BACKGROUND = Color.BLACK;
+    private static final Color DEFAULT_FOREGROUND = new Color(229, 229, 229);  // WHITE
+
+    // Font settings
+    private static final String WINDOWS_FONT = "Consolas";
+    private static final String MAC_FONT = "Menlo";
+    private static final String LINUX_FONT = "DejaVu Sans Mono";
+
+    // ANSI color settings
     private static final Pattern ANSI_PATTERN = Pattern.compile("\u001B\\[([0-9;]*)m");
-
     private static final Color[] ANSI_COLORS = {
         new Color(0, 0, 0),          // BLACK
         new Color(205, 0, 0),        // RED
@@ -35,16 +47,26 @@ public class LogPanel extends JPanel {
         new Color(255, 255, 255)     // BRIGHT WHITE
     };
 
+    // ANSI code offsets
+    private static final int FOREGROUND_COLOR_OFFSET = 30;
+    private static final int BACKGROUND_COLOR_OFFSET = 40;
+    private static final int BRIGHT_COLOR_OFFSET = 82;  // 90-8
+    private static final int BRIGHT_BG_COLOR_OFFSET = 92;  // 100-8
+
+    // ANSI control codes
+    private static final int ANSI_RESET = 0;
+    private static final int ANSI_BOLD = 1;
+
     public LogPanel() {
         setLayout(new BorderLayout());
         
         logTextPane = new JTextPane();
         styledDoc = logTextPane.getStyledDocument();
-        logScrollPane = new JScrollPane(logTextPane);
+        JScrollPane logScrollPane = new JScrollPane(logTextPane);
         
         defaultStyle = new SimpleAttributeSet();
-        StyleConstants.setForeground(defaultStyle, ANSI_COLORS[7]);  // Default WHITE
-        StyleConstants.setBackground(defaultStyle, Color.BLACK);
+        StyleConstants.setForeground(defaultStyle, DEFAULT_FOREGROUND);
+        StyleConstants.setBackground(defaultStyle, DEFAULT_BACKGROUND);
         StyleConstants.setFontFamily(defaultStyle, getDefaultMonospacedFont());
         
         configureLogTextPane();
@@ -54,23 +76,23 @@ public class LogPanel extends JPanel {
     public static String getDefaultMonospacedFont() {
         String os = System.getProperty("os.name").toLowerCase();
         if (os.contains("win")) {
-            return "Consolas";
+            return WINDOWS_FONT;
         } else if (os.contains("mac")) {
-            return "Menlo";
+            return MAC_FONT;
         } else {
-            return "DejaVu Sans Mono";
+            return LINUX_FONT;
         }
     }
 
     private void configureLogTextPane() {
         logTextPane.setEditable(false);
-        logTextPane.setBackground(Color.BLACK);
-        logTextPane.setForeground(ANSI_COLORS[7]);
-        logTextPane.setFont(new Font(getDefaultMonospacedFont(), Font.PLAIN, 12));
+        logTextPane.setBackground(DEFAULT_BACKGROUND);
+        logTextPane.setForeground(DEFAULT_FOREGROUND);
+        logTextPane.setFont(new Font(getDefaultMonospacedFont(), Font.PLAIN, DEFAULT_FONT_SIZE));
         
         // Set default style
-        StyleConstants.setForeground(defaultStyle, ANSI_COLORS[7]);
-        StyleConstants.setBackground(defaultStyle, Color.BLACK);
+        StyleConstants.setForeground(defaultStyle, DEFAULT_FOREGROUND);
+        StyleConstants.setBackground(defaultStyle, DEFAULT_BACKGROUND);
         StyleConstants.setFontFamily(defaultStyle, getDefaultMonospacedFont());
     }
 
@@ -81,7 +103,7 @@ public class LogPanel extends JPanel {
                 trimBuffer();
                 logTextPane.setCaretPosition(styledDoc.getLength());
             } catch (BadLocationException e) {
-                e.printStackTrace();
+                AppLogger.error("Failed to append log", e);
             }
         });
     }
@@ -115,29 +137,29 @@ public class LogPanel extends JPanel {
 
     private void updateStyle(SimpleAttributeSet style, int code) {
         switch (code) {
-            case 0:  // Reset
-                StyleConstants.setForeground(style, ANSI_COLORS[7]);  // Default WHITE
-                StyleConstants.setBackground(style, Color.BLACK);
+            case ANSI_RESET:  // Reset
+                StyleConstants.setForeground(style, DEFAULT_FOREGROUND);
+                StyleConstants.setBackground(style, DEFAULT_BACKGROUND);
                 StyleConstants.setBold(style, false);
                 break;
-            case 1:  // Bold
+            case ANSI_BOLD:  // Bold
                 StyleConstants.setBold(style, true);
                 break;
             case 30: case 31: case 32: case 33:
             case 34: case 35: case 36: case 37:
-                StyleConstants.setForeground(style, ANSI_COLORS[code - 30]);
+                StyleConstants.setForeground(style, ANSI_COLORS[code - FOREGROUND_COLOR_OFFSET]);
                 break;
             case 90: case 91: case 92: case 93:
             case 94: case 95: case 96: case 97:
-                StyleConstants.setForeground(style, ANSI_COLORS[code - 82]);  // -90+8
+                StyleConstants.setForeground(style, ANSI_COLORS[code - BRIGHT_COLOR_OFFSET]);
                 break;
             case 40: case 41: case 42: case 43:
             case 44: case 45: case 46: case 47:
-                StyleConstants.setBackground(style, ANSI_COLORS[code - 40]);
+                StyleConstants.setBackground(style, ANSI_COLORS[code - BACKGROUND_COLOR_OFFSET]);
                 break;
             case 100: case 101: case 102: case 103:
             case 104: case 105: case 106: case 107:
-                StyleConstants.setBackground(style, ANSI_COLORS[code - 92]);  // -100+8
+                StyleConstants.setBackground(style, ANSI_COLORS[code - BRIGHT_BG_COLOR_OFFSET]);
                 break;
         }
     }
@@ -178,7 +200,7 @@ public class LogPanel extends JPanel {
         try {
             styledDoc.remove(0, styledDoc.getLength());
         } catch (BadLocationException e) {
-            e.printStackTrace();
+            AppLogger.error("Failed to clear log", e);
         }
     }
 

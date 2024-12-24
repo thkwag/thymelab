@@ -1,5 +1,7 @@
 package com.github.thkwag.thymelab.launcher.process;
 
+import com.github.thkwag.thymelab.launcher.config.ConfigManager;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -9,11 +11,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.Map;
-import com.github.thkwag.thymelab.launcher.config.ConfigManager;
 
 public class AppProcessManager {
     private final ConfigManager config;
@@ -75,7 +76,7 @@ public class AppProcessManager {
             
             // Processor jar filename (remove whitespace)
             String jarFileName = String.format("thymelab-processor-%s.jar", version.replaceAll("\\s+", ""));
-            String logMessage = "Looking for jar file: " + jarFileName + "\n";
+            StringBuilder logMessage = new StringBuilder("Looking for jar file: " + jarFileName + "\n");
 
             // Find current jar or class file location
             File currentLocation = new File(AppProcessManager.class.getProtectionDomain()
@@ -84,7 +85,7 @@ public class AppProcessManager {
                     .toURI());
 
             // Add debug log
-            logMessage = "Current location: " + currentLocation.getPath() + "\n";
+            logMessage = new StringBuilder("Current location: " + currentLocation.getPath() + "\n");
 
             // Search paths in order
             List<File> searchPaths = new ArrayList<>();
@@ -121,10 +122,9 @@ public class AppProcessManager {
             searchPaths.add(new File("../lib"));
             
             // Add debug log
-            logMessage += "Searching for processor jar in following locations:\n";
+            logMessage.append("Searching for processor jar in following locations:\n");
             for (File path : searchPaths) {
-                // logConsumer.accept("- " + path.getAbsolutePath() + "\n");
-                logMessage += "- " + path.getAbsolutePath() + "\n";
+                logMessage.append("- ").append(path.getAbsolutePath()).append("\n");
             }
             
             // Find JAR file in each path
@@ -138,8 +138,8 @@ public class AppProcessManager {
             }
 
             if (jarFile == null) {
-                logMessage += "Error: Cannot find processor jar in any of the search paths\n";
-                logConsumer.accept(logMessage);
+                logMessage.append("Error: Cannot find processor jar in any of the search paths\n");
+                logConsumer.accept(logMessage.toString());
                 return;
             }
 

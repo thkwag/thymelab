@@ -1,5 +1,7 @@
 package com.github.thkwag.thymelab.launcher.config;
 
+import com.github.thkwag.thymelab.launcher.util.AppLogger;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -10,13 +12,19 @@ public class ConfigManager {
     private final String path;
     private final String version = loadVersion();
 
+    // Version related constants
+    private static final String VERSION_NOT_FOUND = "not-found";
+    private static final String VERSION_FILE_NAME = "version.properties";
+    private static final String VERSION_PROPERTY_KEY = "version";
+    private static final String GRADLE_SETTINGS_FILE = "settings.gradle";
+
     public ConfigManager(String path) {
         this.path = path;
     }
 
     private String loadVersion() {
         String version = loadVersionFromClasspath();
-        if (!"not-found".equals(version)) {
+        if (!VERSION_NOT_FOUND.equals(version)) {
             return version;
         }
         
@@ -25,16 +33,16 @@ public class ConfigManager {
     }
 
     private String loadVersionFromClasspath() {
-        try (InputStream is = getClass().getClassLoader().getResourceAsStream("version.properties")) {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream(VERSION_FILE_NAME)) {
             if (is != null) {
                 Properties versionProps = new Properties();
                 versionProps.load(is);
-                return versionProps.getProperty("version", "not-found").trim();
+                return versionProps.getProperty(VERSION_PROPERTY_KEY, VERSION_NOT_FOUND).trim();
             }
         } catch (IOException e) {
             // ignore
         }
-        return "not-found";
+        return VERSION_NOT_FOUND;
     }
 
     private String loadVersionFromProjectRoot() {
@@ -46,17 +54,17 @@ public class ConfigManager {
             
             File projectRoot = findProjectRoot(currentLocation);
             if (projectRoot != null) {
-                return loadVersionFromFile(new File(projectRoot, "version.properties"));
+                return loadVersionFromFile(new File(projectRoot, VERSION_FILE_NAME));
             }
         } catch (Exception e) {
             // ignore
         }
-        return "not-found";
+        return VERSION_NOT_FOUND;
     }
 
     private File findProjectRoot(File start) {
         File current = start;
-        while (current != null && !new File(current, "settings.gradle").exists()) {
+        while (current != null && !new File(current, GRADLE_SETTINGS_FILE).exists()) {
             current = current.getParentFile();
         }
         return current;
@@ -67,12 +75,12 @@ public class ConfigManager {
             try (FileInputStream fis = new FileInputStream(versionFile)) {
                 Properties versionProps = new Properties();
                 versionProps.load(fis);
-                return versionProps.getProperty("version", "not-found").trim();
+                return versionProps.getProperty(VERSION_PROPERTY_KEY, VERSION_NOT_FOUND).trim();
             } catch (IOException e) {
                 // ignore
             }
         }
-        return "not-found";
+        return VERSION_NOT_FOUND;
     }
 
     public void load() {
@@ -80,7 +88,7 @@ public class ConfigManager {
             try (InputStream in = Files.newInputStream(Paths.get(path))) {
                 props.load(in);
             } catch (IOException e) {
-                e.printStackTrace();
+                AppLogger.error("Failed to load configuration", e);
             }
         }
     }
@@ -89,7 +97,7 @@ public class ConfigManager {
         try (OutputStream out = Files.newOutputStream(Paths.get(path))) {
             props.store(out, "Application Configuration");
         } catch (IOException e) {
-            e.printStackTrace();
+            AppLogger.error("Failed to save configuration", e);
         }
     }
 

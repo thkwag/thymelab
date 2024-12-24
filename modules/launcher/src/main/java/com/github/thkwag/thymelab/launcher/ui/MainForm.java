@@ -2,8 +2,13 @@ package com.github.thkwag.thymelab.launcher.ui;
 
 import com.github.thkwag.thymelab.launcher.config.ConfigManager;
 import com.github.thkwag.thymelab.launcher.process.AppProcessManager;
-import com.github.thkwag.thymelab.launcher.ui.components.*;
-import com.github.thkwag.thymelab.launcher.ui.dialogs.*;
+import com.github.thkwag.thymelab.launcher.ui.components.ControlPanel;
+import com.github.thkwag.thymelab.launcher.ui.components.LogPanel;
+import com.github.thkwag.thymelab.launcher.ui.components.MainMenuBar;
+import com.github.thkwag.thymelab.launcher.ui.dialogs.AboutDialog;
+import com.github.thkwag.thymelab.launcher.ui.dialogs.SettingsDialog;
+import com.github.thkwag.thymelab.launcher.ui.dialogs.ThymeleafSettingsDialog;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
@@ -19,16 +24,24 @@ public class MainForm extends JFrame {
     private final ConfigManager config;
     private AppProcessManager processManager;
 
+    // Layout constants
+    private static final int BORDER_SPACING = 0;
+    private static final int VERTICAL_SPACING = 1;
+    private static final int PANEL_PADDING = 5;
+
+    // Default settings
+    private static final String DEFAULT_LANGUAGE = "en";
+
     public MainForm(ConfigManager config) {
         this.config = config;
         
-        mainPanel = new JPanel(new BorderLayout(0, 1));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        mainPanel = new JPanel(new BorderLayout(BORDER_SPACING, VERTICAL_SPACING));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(PANEL_PADDING, PANEL_PADDING, PANEL_PADDING, PANEL_PADDING));
         
         logPanel = new LogPanel();
         controlPanel = new ControlPanel(config);
         ResourceBundle bundle = ResourceBundle.getBundle("messages", 
-            Locale.forLanguageTag(config.getProperty("language", "en")));
+            Locale.forLanguageTag(config.getProperty("language", DEFAULT_LANGUAGE)));
         menuBar = new MainMenuBar(this, bundle);
         
         layoutComponents();
@@ -157,7 +170,7 @@ public class MainForm extends JFrame {
 
     public void showSettingsDialog(MainFrame parent) {
         // Get current language setting
-        Locale currentLocale = Locale.forLanguageTag(config.getProperty("language", "en"));
+        Locale currentLocale = Locale.forLanguageTag(config.getProperty("language", DEFAULT_LANGUAGE));
         ResourceBundle bundle = ResourceBundle.getBundle("messages", currentLocale);
 
         SettingsDialog dialog = new SettingsDialog(parent, config, bundle);
@@ -172,22 +185,18 @@ public class MainForm extends JFrame {
 
     public void showAboutDialog(MainFrame parent) {
         ResourceBundle bundle = ResourceBundle.getBundle("messages", 
-            Locale.forLanguageTag(config.getProperty("language", "en")));
+            Locale.forLanguageTag(config.getProperty("language", DEFAULT_LANGUAGE)));
         AboutDialog dialog = new AboutDialog(parent, bundle, config);
         dialog.setVisible(true);
     }
 
     private void initComponents() {
-        // Existing UI component initialization code
-        // ... 
     }
 
     private void initializeFunctionality() {
-        // Move functionality initialization code here
-        // e.g.: Process manager init, settings load, etc.
         processManager = new AppProcessManager(
-            message -> logPanel.appendLog(message),
-            () -> controlPanel.onProcessStopped(),
+                logPanel::appendLog,
+                controlPanel::onProcessStopped,
             config
         );
 

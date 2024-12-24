@@ -4,28 +4,26 @@ import com.github.thkwag.thymelab.launcher.config.ConfigManager;
 import com.github.thkwag.thymelab.launcher.config.LocaleManager;
 import com.github.thkwag.thymelab.launcher.process.AppProcessManager;
 import com.github.thkwag.thymelab.launcher.ui.components.ControlPanel;
+import com.github.thkwag.thymelab.launcher.ui.components.LogPanel;
 import com.github.thkwag.thymelab.launcher.ui.components.MainMenuBar;
 import com.github.thkwag.thymelab.launcher.ui.dialogs.AboutDialog;
-import com.github.thkwag.thymelab.launcher.ui.components.LogPanel;
+import com.github.thkwag.thymelab.launcher.util.AppLogger;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import javax.imageio.ImageIO;
-
-import java.util.Locale;
+import java.awt.image.BufferedImage;
 import java.util.Objects;
 import java.util.ResourceBundle;
-import java.awt.image.BufferedImage;
-import java.awt.Graphics2D;
 
 public class MainFrame extends JFrame {
     private final ConfigManager config;
     private final LocaleManager localeManager;
     private ResourceBundle bundle;
 
-    private final AppProcessManager appProcessManager;
+    private AppProcessManager appProcessManager;
     private final MainForm mainForm;
     private ControlPanel controlPanel;
     private final MainMenuBar menuBar;
@@ -33,7 +31,33 @@ public class MainFrame extends JFrame {
     private TrayIcon trayIcon;
     private MenuItem showHideMenuItem;
     private MenuItem exitMenuItem;
+    private MenuItem serverStatusItem;
     private boolean isRunning = false;
+
+    // Default settings
+    private static final String DEFAULT_LANGUAGE = "en";
+    private static final int DEFAULT_BUFFER_SIZE = 1000;
+    private static final String DEFAULT_LOG_LEVEL = "INFO";
+    private static final int DEFAULT_FONT_SIZE = 12;
+    private static final int DEFAULT_PORT = 8080;
+
+    // Window settings
+    private static final int DEFAULT_WINDOW_WIDTH = 1024;
+    private static final int DEFAULT_WINDOW_HEIGHT = 768;
+    private static final int DEFAULT_WINDOW_X = 200;
+    private static final int DEFAULT_WINDOW_Y = 150;
+    private static final int DEFAULT_WINDOW_STATE = Frame.NORMAL;
+
+    // Icon settings
+    private static final String[] ICON_PATHS = {"/icon.png", "/images/icon.png", "/icons/icon.png"};
+    private static final String MAC_ICON_PATH = "/icon.icns";
+    private static final String WINDOWS_ICON_PATH = "/icon.ico";
+    private static final String DEFAULT_ICON_PATH = "/icon.png";
+
+    // Tray icon settings
+    private static final int DEFAULT_TRAY_ICON_SIZE = 16;
+    private static final Color DEFAULT_TRAY_ICON_COLOR = Color.GREEN;
+    private static final Color DEFAULT_TRAY_ICON_BORDER = Color.BLACK;
 
     public MainFrame(ConfigManager config, LocaleManager localeManager) {
         this.config = config;
@@ -46,7 +70,27 @@ public class MainFrame extends JFrame {
         setContentPane(mainForm.getMainPanel());
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
+        // Initialize AppLogger
+        AppLogger.setLogConsumer(mainForm::appendLog);
+
         setupIcon();
+        setupWindowListeners();
+        updateTitle();
+        initActions();
+        loadSettings();
+        setupProcessManager();
+        setupTrayIcon();
+
+        // Start process after window is shown
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowOpened(WindowEvent e) {
+                SwingUtilities.invokeLater(() -> startApp());
+            }
+        });
+    }
+
+    private void setupWindowListeners() {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -64,55 +108,71 @@ public class MainFrame extends JFrame {
                 }
             }
         });
+    }
 
-        // Set title
-        String title = String.format("%s - %s", 
-            bundle.getString("app_title"), 
-            bundle.getString("sub_title"));
-        setTitle(title);
+    private void loadSettings() {
+        // Load buffer size
+        updateBufferSize();
 
-        initActions();
-
-        // Load settings
-        int bufSize = config.getInt("log.buffer.size", 1000);
-        mainForm.setMaxBufferSize(bufSize);
-        mainForm.setLogBufferText(String.valueOf(bufSize));
-
-        String savedLevel = config.getProperty("log.level", "INFO");
+        // Load log level
+        String savedLevel = config.getProperty("log.level", DEFAULT_LOG_LEVEL);
         mainForm.setLogLevelComboItem(savedLevel);
 
-        String savedLang = config.getProperty("language", "en");
-        mainForm.setLanguageComboItem(savedLang.equalsIgnoreCase("ko") ? "KO" : "EN");
+        // Load language
+        updateLanguageCombo();
 
-        // Initialize process manager
-        appProcessManager = new AppProcessManager(
-                mainForm::appendLog,
-            () -> SwingUtilities.invokeLater(() -> updateButtonStates(false)),
-            config
-        );
+        // Load font settings
+        updateFontSettings();
 
         // Initialize UI state
         updateButtonStates(true);
         updateTexts();
+    }
 
-        // Load and apply font settings
+    private void setupProcessManager() {
+        appProcessManager = new AppProcessManager(
+            mainForm::appendLog,
+            () -> SwingUtilities.invokeLater(() -> updateButtonStates(false)),
+            config
+        );
+    }
+
+    private void updateTitle() {
+        String title = String.format("%s - %s", 
+            bundle.getString("app_title"), 
+            bundle.getString("sub_title"));
+        setTitle(title);
+    }
+
+    private void updateLanguageCombo() {
+        String langCode = getLanguageCode();
+        mainForm.setLanguageComboItem(langCode.equalsIgnoreCase("ko") ? "KO" : "EN");
+    }
+
+    private String getLanguageCode() {
+        return config.getProperty("language", DEFAULT_LANGUAGE);
+    }
+
+    private void updateBufferSize() {
+        int bufSize = config.getInt("log.buffer.size", DEFAULT_BUFFER_SIZE);
+        mainForm.setMaxBufferSize(bufSize);
+        mainForm.setLogBufferText(String.valueOf(bufSize));
+    }
+
+    private void updateFontSettings() {
         String fontFamily = config.getProperty("font.family", LogPanel.getDefaultMonospacedFont());
-        int fontSize = config.getInt("font.size", 12);
+        int fontSize = config.getInt("font.size", DEFAULT_FONT_SIZE);
         mainForm.updateLogFont(fontFamily, fontSize);
-
-        setupTrayIcon();
-
-        // Start process after window is shown
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowOpened(WindowEvent e) {
-                SwingUtilities.invokeLater(() -> startApp());
-            }
-        });
     }
 
     private void initActions() {
         controlPanel = mainForm.getControlPanel();
+        setupButtonActions();
+        setupMenuActions();
+        setupLanguageComboAction();
+    }
+
+    private void setupButtonActions() {
         controlPanel.getStartButton().addActionListener(e -> startApp());
         controlPanel.getStopButton().addActionListener(e -> stopApp());
         controlPanel.getClearLogButton().addActionListener(e -> mainForm.clearLog());
@@ -123,44 +183,75 @@ public class MainFrame extends JFrame {
                 config.setProperty("log.level", level);
             }
         });
+    }
 
+    private void setupMenuActions() {
         mainForm.getProgramSettingsMenuItem().addActionListener(e -> {
             mainForm.showSettingsDialog(this);
-            
-            String newLang = config.getProperty("language", "en");
-            if (!newLang.equals(localeManager.getCurrentLanguage())) {
-                localeManager.setLanguage(newLang);
-                bundle = localeManager.getBundle();
-                updateTexts();
-            }
-            
-            int newBufferSize = config.getInt("log.buffer.size", 1000);
-            mainForm.setMaxBufferSize(newBufferSize);
-            mainForm.setLogBufferText(String.valueOf(newBufferSize));
-            
-            String newFont = config.getProperty("font.family", Font.SANS_SERIF);
-            int newSize = config.getInt("font.size", 12);
-            mainForm.updateLogFont(newFont, newSize);
+            updateFromSettings();
         });
 
-        mainForm.getThymeleafSettingsMenuItem().addActionListener(e -> {
-            mainForm.showThymeleafSettingsDialog(this, bundle, config);
-        });
+        mainForm.getThymeleafSettingsMenuItem().addActionListener(e -> 
+            mainForm.showThymeleafSettingsDialog(this, bundle, config));
 
-        mainForm.getAboutMenuItem().addActionListener(e -> {
-            showAboutDialog(this);
-        });
+        mainForm.getAboutMenuItem().addActionListener(e -> showAboutDialog(this));
+    }
 
+    private void setupLanguageComboAction() {
         controlPanel.getLanguageCombo().addActionListener(e -> {
             String lang = (String) controlPanel.getLanguageCombo().getSelectedItem();
             if (lang != null) {
                 String code = lang.equals("KO") ? "ko" : "en";
-                localeManager.setLanguage(code);
                 config.setProperty("language", code);
-                bundle = localeManager.getBundle();
-                updateTexts();
+                updateLanguage();
             }
         });
+    }
+
+    private void updateLanguage() {
+        String langCode = getLanguageCode();
+        if (!langCode.equals(localeManager.getCurrentLanguage())) {
+            localeManager.setLanguage(langCode);
+            bundle = localeManager.getBundle();
+            updateTexts();
+        }
+    }
+
+    public void updateFromSettings() {
+        updateLanguage();
+        updateBufferSize();
+        updateFontSettings();
+    }
+
+    public void updateTexts() {
+        updateButtons();
+        updateLabels();
+        updateMenus();
+        updateTitle();
+        updateTrayIcon();
+    }
+
+    private void updateButtons() {
+        controlPanel.getStartButton().setText(bundle.getString("start"));
+        controlPanel.getStopButton().setText(bundle.getString("stop"));
+        controlPanel.getClearLogButton().setText(bundle.getString("clear_log"));
+    }
+
+    private void updateLabels() {
+        controlPanel.getLogLevelLabel().setText(bundle.getString("log_level"));
+        controlPanel.getLogBufferLabel().setText(bundle.getString("log_buffer_size"));
+        controlPanel.getLanguageLabel().setText(bundle.getString("language"));
+        controlPanel.getLogBufferUnit().setText(bundle.getString("lines"));
+        controlPanel.setFontSettingsText(bundle.getString("font"), bundle.getString("font_size"));
+    }
+
+    private void updateMenus() {
+        menuBar.getToolsMenu().setText(bundle.getString("menu_tools"));
+        menuBar.getHelpMenu().setText(bundle.getString("menu_help"));
+        menuBar.getProgramSettingsMenuItem().setText(bundle.getString("menu_program_settings"));
+        menuBar.getThymeleafSettingsMenuItem().setText(bundle.getString("menu_thymeleaf_settings"));
+        menuBar.getExitMenuItem().setText(bundle.getString("menu_exit"));
+        menuBar.getAboutMenuItem().setText(bundle.getString("menu_about"));
     }
 
     private void startApp() {
@@ -184,50 +275,12 @@ public class MainFrame extends JFrame {
         controlPanel.getStopButton().setEnabled(isRunning);
     }
 
-    public void updateTexts() {
-        controlPanel.getStartButton().setText(bundle.getString("start"));
-        controlPanel.getStopButton().setText(bundle.getString("stop"));
-        controlPanel.getClearLogButton().setText(bundle.getString("clear_log"));
-
-        controlPanel.getLogLevelLabel().setText(bundle.getString("log_level"));
-        controlPanel.getLogBufferLabel().setText(bundle.getString("log_buffer_size"));
-        controlPanel.getLanguageLabel().setText(bundle.getString("language"));
-        
-        MainMenuBar mainMenuBar = (MainMenuBar) menuBar;
-        mainMenuBar.getToolsMenu().setText(bundle.getString("menu_tools"));
-        mainMenuBar.getHelpMenu().setText(bundle.getString("menu_help"));
-        mainMenuBar.getProgramSettingsMenuItem().setText(bundle.getString("menu_program_settings"));
-        mainMenuBar.getThymeleafSettingsMenuItem().setText(bundle.getString("menu_thymeleaf_settings"));
-        mainMenuBar.getExitMenuItem().setText(bundle.getString("menu_exit"));
-        mainMenuBar.getAboutMenuItem().setText(bundle.getString("menu_about"));
-        
-        controlPanel.getLogBufferUnit().setText(bundle.getString("lines"));
-        controlPanel.setFontSettingsText(bundle.getString("font"), bundle.getString("font_size"));
-        
-        // Update title
-        String title = String.format("%s - %s", 
-            bundle.getString("app_title"), 
-            bundle.getString("sub_title"));
-        setTitle(title);
-
-        // Update tray icon text and menu
-        if (trayIcon != null) {
-            trayIcon.setToolTip(getTooltipText());
-            if (showHideMenuItem != null) {
-                showHideMenuItem.setLabel(isVisible() ? bundle.getString("hide") : bundle.getString("show"));
-            }
-            if (exitMenuItem != null) {
-                exitMenuItem.setLabel(bundle.getString("menu_exit"));
-            }
-        }
-    }
-
     public void loadWindowState() {
-        int width = config.getInt("window.width", 1024);
-        int height = config.getInt("window.height", 768);
-        int x = config.getInt("window.x", 200);
-        int y = config.getInt("window.y", 150);
-        int state = config.getInt("window.state", Frame.NORMAL);
+        int width = config.getInt("window.width", DEFAULT_WINDOW_WIDTH);
+        int height = config.getInt("window.height", DEFAULT_WINDOW_HEIGHT);
+        int x = config.getInt("window.x", DEFAULT_WINDOW_X);
+        int y = config.getInt("window.y", DEFAULT_WINDOW_Y);
+        int state = config.getInt("window.state", DEFAULT_WINDOW_STATE);
 
         // Set screen size
         setSize(width, height);
@@ -269,31 +322,16 @@ public class MainFrame extends JFrame {
         }
     }
 
-    public void updateFromSettings() {
-        String newLang = config.getProperty("language", "en");
-        if (!newLang.equals(localeManager.getCurrentLanguage())) {
-            localeManager.setLanguage(newLang);
-            bundle = localeManager.getBundle();
-            updateTexts();
-        }
-        
-        int newBufferSize = config.getInt("log.buffer.size", 1000);
-        mainForm.setMaxBufferSize(newBufferSize);
-        mainForm.setLogBufferText(String.valueOf(newBufferSize));
-        
-        String newFont = config.getProperty("font.family", Font.SANS_SERIF);
-        int newSize = config.getInt("font.size", 12);
-        mainForm.updateLogFont(newFont, newSize);
-    }
-
     private void onProcessStart() {
         isRunning = true;
         updateTrayIcon();
+        mainForm.getControlPanel().onProcessStarted(getServerUrl());
     }
 
     private void onProcessStop() {
         isRunning = false;
         updateTrayIcon();
+        mainForm.getControlPanel().onProcessStopped();
     }
 
     private void setupTrayIcon() {
@@ -306,7 +344,21 @@ public class MainFrame extends JFrame {
             showHideMenuItem.addActionListener(e -> toggleVisibility());
             popup.add(showHideMenuItem);
 
-            // Add separator
+            // Server status menu item (clickable when server is running)
+            serverStatusItem = new MenuItem(getStatusText());
+            serverStatusItem.addActionListener(e -> {
+                if (isRunning) {
+                    try {
+                        Desktop.getDesktop().browse(new java.net.URI(getServerUrl()));
+                    } catch (Exception ex) {
+                        System.err.println("Could not open browser: " + ex.getMessage());
+                    }
+                }
+            });
+            serverStatusItem.setEnabled(false);  // Initially disabled
+            popup.add(serverStatusItem);
+
+            // Add separator before exit
             popup.addSeparator();
 
             // Exit menu item
@@ -323,9 +375,8 @@ public class MainFrame extends JFrame {
             try {
                 // Try multiple icon paths
                 Image image = null;
-                String[] iconPaths = {"/icon.png", "/images/icon.png", "/icons/icon.png"};
                 
-                for (String path : iconPaths) {
+                for (String path : ICON_PATHS) {
                     try {
                         image = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream(path)));
                         if (image != null) break;
@@ -353,13 +404,13 @@ public class MainFrame extends JFrame {
     }
 
     private Image createDefaultIcon() {
-        // Create a simple default icon (16x16 pixels)
-        BufferedImage image = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+        // Create a simple default icon
+        BufferedImage image = new BufferedImage(DEFAULT_TRAY_ICON_SIZE, DEFAULT_TRAY_ICON_SIZE, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = image.createGraphics();
-        g2d.setColor(Color.GREEN);
-        g2d.fillRect(0, 0, 16, 16);
-        g2d.setColor(Color.BLACK);
-        g2d.drawRect(0, 0, 15, 15);
+        g2d.setColor(DEFAULT_TRAY_ICON_COLOR);
+        g2d.fillRect(0, 0, DEFAULT_TRAY_ICON_SIZE, DEFAULT_TRAY_ICON_SIZE);
+        g2d.setColor(DEFAULT_TRAY_ICON_BORDER);
+        g2d.drawRect(0, 0, DEFAULT_TRAY_ICON_SIZE - 1, DEFAULT_TRAY_ICON_SIZE - 1);
         g2d.dispose();
         return image;
     }
@@ -375,15 +426,35 @@ public class MainFrame extends JFrame {
         }
     }
 
+    private String getStatusText() {
+        if (isRunning) {
+            return String.format("%s - %s", getServerUrl(), bundle.getString("running"));
+        }
+        return bundle.getString("stopped");
+    }
+
     private String getTooltipText() {
-        String status = isRunning ? bundle.getString("running") : bundle.getString("stopped");
-        return String.format("%s - %s", bundle.getString("app_title"), status);
+        return String.format("%s - %s", 
+            bundle.getString("app_title"), 
+            getStatusText());
     }
 
     private void updateTrayIcon() {
         if (trayIcon != null) {
+            // Update tooltip with current status
             trayIcon.setToolTip(getTooltipText());
-            showHideMenuItem.setLabel(isVisible() ? bundle.getString("hide") : bundle.getString("show"));
+            
+            // Update menu items
+            if (showHideMenuItem != null) {
+                showHideMenuItem.setLabel(isVisible() ? bundle.getString("hide") : bundle.getString("show"));
+            }
+            if (exitMenuItem != null) {
+                exitMenuItem.setLabel(bundle.getString("menu_exit"));
+            }
+            if (serverStatusItem != null) {
+                serverStatusItem.setEnabled(isRunning);
+                serverStatusItem.setLabel(getStatusText());
+            }
         }
     }
 
@@ -391,11 +462,11 @@ public class MainFrame extends JFrame {
         try {
             // Set platform-specific icon
             if (System.getProperty("os.name").toLowerCase().contains("mac")) {
-                setIconImage(ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/icon.icns"))));
+                setIconImage(ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream(MAC_ICON_PATH))));
             } else if (System.getProperty("os.name").toLowerCase().contains("windows")) {
-                setIconImage(ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/icon.ico"))));
+                setIconImage(ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream(WINDOWS_ICON_PATH))));
             } else {
-                setIconImage(ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/icon.png"))));
+                setIconImage(ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream(DEFAULT_ICON_PATH))));
             }
         } catch (Exception e) {
             // ignore
@@ -403,9 +474,12 @@ public class MainFrame extends JFrame {
     }
 
     public void showAboutDialog(MainFrame parent) {
-        ResourceBundle bundle = ResourceBundle.getBundle("messages", 
-            Locale.forLanguageTag(config.getProperty("language", "en")));
         AboutDialog dialog = new AboutDialog(parent, bundle, config);
         dialog.setVisible(true);
+    }
+
+    private String getServerUrl() {
+        int port = config.getInt("server.port", DEFAULT_PORT);
+        return String.format("http://localhost:%d", port);
     }
 } 

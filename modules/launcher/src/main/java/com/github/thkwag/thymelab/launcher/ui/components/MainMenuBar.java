@@ -1,16 +1,17 @@
 package com.github.thkwag.thymelab.launcher.ui.components;
 
-import javax.swing.*;
 import com.github.thkwag.thymelab.launcher.ui.MainForm;
+
+import javax.swing.*;
 import java.util.ResourceBundle;
 
 public class MainMenuBar extends JMenuBar {
-    private JMenu toolsMenu;
-    private JMenu helpMenu;
-    private JMenuItem programSettingsMenuItem;
-    private JMenuItem thymeleafSettingsMenuItem;
-    private JMenuItem aboutMenuItem;
-    private JMenuItem exitMenuItem;
+    private final JMenu toolsMenu;
+    private final JMenu helpMenu;
+    private final JMenuItem programSettingsMenuItem;
+    private final JMenuItem thymeleafSettingsMenuItem;
+    private final JMenuItem aboutMenuItem;
+    private final JMenuItem exitMenuItem;
 
     public MainMenuBar(MainForm mainForm, ResourceBundle bundle) {
         toolsMenu = new JMenu(bundle.getString("menu_tools"));
@@ -24,7 +25,7 @@ public class MainMenuBar extends JMenuBar {
         toolsMenu.add(thymeleafSettingsMenuItem);
         toolsMenu.addSeparator();
         
-        exitMenuItem = new JMenuItem("Exit");
+        exitMenuItem = new JMenuItem(bundle.getString("menu_exit"));
         exitMenuItem.addActionListener(e -> System.exit(0));
         toolsMenu.add(exitMenuItem);
         

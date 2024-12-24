@@ -1,9 +1,9 @@
 package com.github.thkwag.thymelab.launcher.config;
 
 import java.util.Locale;
+import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 import java.util.logging.Logger;
-import java.util.MissingResourceException;
 
 public class LocaleManager {
     private static final Logger logger = Logger.getLogger(LocaleManager.class.getName());

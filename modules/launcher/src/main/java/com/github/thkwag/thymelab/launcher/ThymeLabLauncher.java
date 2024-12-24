@@ -6,7 +6,8 @@ import com.github.thkwag.thymelab.launcher.config.LocaleManager;
 import com.github.thkwag.thymelab.launcher.ui.MainFrame;
 
 import javax.swing.*;
-import java.awt.MediaTracker;
+import java.awt.*;
+import java.util.Objects;
 
 public class ThymeLabLauncher {
     public static void main(String[] args) {
@@ -28,7 +29,7 @@ public class ThymeLabLauncher {
             }));
 
             // Set application icon
-            ImageIcon icon = new ImageIcon(ThymeLabLauncher.class.getResource("/icon.png"));
+            ImageIcon icon = new ImageIcon(Objects.requireNonNull(ThymeLabLauncher.class.getResource("/icon.png")));
             if (icon.getImageLoadStatus() == MediaTracker.COMPLETE) {
                 mainFrame.setIconImage(icon.getImage());
             }

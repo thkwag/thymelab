@@ -1,10 +1,11 @@
 package com.github.thkwag.thymelab.launcher.ui.dialogs;
 
+import com.github.thkwag.thymelab.launcher.config.ConfigManager;
+
 import javax.swing.*;
 import java.awt.*;
-import java.util.ResourceBundle;
-import com.github.thkwag.thymelab.launcher.config.ConfigManager;
 import java.io.File;
+import java.util.ResourceBundle;
 
 public class ThymeleafSettingsDialog extends JDialog {
     private final ConfigManager config;
@@ -14,9 +15,20 @@ public class ThymeleafSettingsDialog extends JDialog {
     private JTextField dataFolderField;
     private JButton saveButton;
 
+    // Configuration keys
     private static final String KEY_STATIC = "static.folder.path";
     private static final String KEY_TEMPLATES = "templates.folder.path";
     private static final String KEY_DATA = "data.folder.path";
+
+    // Layout constants
+    private static final int BORDER_PADDING_TOP = 10;
+    private static final int BORDER_PADDING_SIDES = 15;
+    private static final int BORDER_PADDING_BOTTOM = 5;
+    private static final int COMPONENT_SPACING = 5;
+    private static final int TEXT_FIELD_COLUMNS = 40;
+
+    // Grid constants
+    private static final int GRID_SPACING = 2;
 
     public ThymeleafSettingsDialog(Frame parent, ResourceBundle bundle, ConfigManager config) {
         super(parent, bundle.getString("menu_thymeleaf_settings"), true);
@@ -33,18 +45,21 @@ public class ThymeleafSettingsDialog extends JDialog {
     }
 
     private void initializeComponents() {
-        staticFolderField = new JTextField(40);
-        templatesFolderField = new JTextField(40);
-        dataFolderField = new JTextField(40);
+        staticFolderField = new JTextField(TEXT_FIELD_COLUMNS);
+        templatesFolderField = new JTextField(TEXT_FIELD_COLUMNS);
+        dataFolderField = new JTextField(TEXT_FIELD_COLUMNS);
         saveButton = new JButton(bundle.getString("save"));
     }
 
     private void layoutComponents() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 15, 5, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(
+            BORDER_PADDING_TOP, BORDER_PADDING_SIDES, 
+            BORDER_PADDING_BOTTOM, BORDER_PADDING_SIDES));
         
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.insets = new Insets(COMPONENT_SPACING, COMPONENT_SPACING, 
+            COMPONENT_SPACING, COMPONENT_SPACING);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         
@@ -55,20 +70,21 @@ public class ThymeleafSettingsDialog extends JDialog {
             staticFolderField);
             
         // Templates folder
-        addFolderRow(panel, gbc, 2,
+        addFolderRow(panel, gbc, GRID_SPACING,
             bundle.getString("templates_folder"),
             bundle.getString("folder_description_templates"),
             templatesFolderField);
             
         // Data folder
-        addFolderRow(panel, gbc, 4,
+        addFolderRow(panel, gbc, GRID_SPACING * 2,
             bundle.getString("data_folder"),
             bundle.getString("folder_description_data"),
             dataFolderField);
 
         // Save button
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(
+            COMPONENT_SPACING, 0, COMPONENT_SPACING, 0));
         saveButton.addActionListener(e -> {
             saveSettings();
             setVisible(false);
@@ -126,9 +142,9 @@ public class ThymeleafSettingsDialog extends JDialog {
         String templatesPath = config.getProperty(KEY_TEMPLATES, "");
         String dataPath = config.getProperty(KEY_DATA, "");
 
-        System.out.println("Loading settings - static: " + staticPath);
-        System.out.println("Loading settings - templates: " + templatesPath);
-        System.out.println("Loading settings - data: " + dataPath);
+        // System.out.println("Loading settings - static: " + staticPath);
+        // System.out.println("Loading settings - templates: " + templatesPath);
+        // System.out.println("Loading settings - data: " + dataPath);
 
         // Set text fields
         staticFolderField.setText(staticPath);

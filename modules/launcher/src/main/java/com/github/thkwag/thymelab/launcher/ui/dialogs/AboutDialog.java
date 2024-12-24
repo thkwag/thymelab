@@ -1,19 +1,41 @@
 package com.github.thkwag.thymelab.launcher.ui.dialogs;
 
-import javax.swing.*;
-import java.awt.*;
-import java.io.InputStream;
-import java.util.ResourceBundle;
-import javax.imageio.ImageIO;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.net.URI;
-import java.awt.Desktop;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import com.github.thkwag.thymelab.launcher.config.ConfigManager;
 
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.ResourceBundle;
+
 public class AboutDialog extends JDialog {
+    
+    // Layout constants
+    private static final int BORDER_PADDING = 20;
+    private static final int ICON_SIZE = 64;
+    private static final int TITLE_FONT_SIZE = 16;
+    private static final int LIBRARIES_FONT_SIZE = 12;
+    private static final int LIBRARIES_WIDTH = 350;
+    private static final int LIBRARIES_HEIGHT = 120;
+    private static final int VERTICAL_SPACING_LARGE = 15;
+    private static final int VERTICAL_SPACING_MEDIUM = 10;
+    private static final int VERTICAL_SPACING_SMALL = 5;
+    private static final int VERTICAL_SPACING_TINY = 2;
+    private static final int TEXT_AREA_PADDING = 5;
+
+    // Color settings
+    private static final Color LINK_COLOR = new Color(100, 100, 100);
+    private static final Color LIBRARIES_BACKGROUND = new Color(250, 250, 250);
+    private static final Color LIBRARIES_BORDER = new Color(240, 240, 240);
+
+    // Resource paths
+    private static final String ICON_PATH = "/icon.png";
+    private static final String LIBRARIES_PATH = "/libraries.txt";
     
     public AboutDialog(Frame parent, ResourceBundle bundle, ConfigManager config) {
         super(parent, bundle.getString("about_title"), true);
@@ -21,24 +43,26 @@ public class AboutDialog extends JDialog {
         
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setBorder(BorderFactory.createEmptyBorder(
+            BORDER_PADDING, BORDER_PADDING, BORDER_PADDING, BORDER_PADDING));
         
         try {
-            InputStream iconStream = getClass().getResourceAsStream("/icon.png");
+            InputStream iconStream = getClass().getResourceAsStream(ICON_PATH);
             if (iconStream != null) {
                 ImageIcon icon = new ImageIcon(ImageIO.read(iconStream));
-                Image scaledImage = icon.getImage().getScaledInstance(64, 64, Image.SCALE_SMOOTH);
+                Image scaledImage = icon.getImage().getScaledInstance(
+                    ICON_SIZE, ICON_SIZE, Image.SCALE_SMOOTH);
                 JLabel iconLabel = new JLabel(new ImageIcon(scaledImage));
                 iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
                 panel.add(iconLabel);
-                panel.add(Box.createVerticalStrut(15));
+                panel.add(Box.createVerticalStrut(VERTICAL_SPACING_LARGE));
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         
         JLabel titleLabel = new JLabel(bundle.getString("app_title"));
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 16));
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, TITLE_FONT_SIZE));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
         JLabel subTitleLabel = new JLabel(bundle.getString("sub_title"));
@@ -52,7 +76,7 @@ public class AboutDialog extends JDialog {
         
         JLabel licenseLabel = new JLabel("MIT License");
         licenseLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        licenseLabel.setForeground(new Color(100, 100, 100));
+        licenseLabel.setForeground(LINK_COLOR);
         
         JLabel linkLabel = new JLabel("<html><a href='" + bundle.getString("about_link") + "'>" + 
             bundle.getString("about_link") + "</a></html>");
@@ -69,33 +93,35 @@ public class AboutDialog extends JDialog {
             }
         });
         
-        panel.add(Box.createVerticalStrut(10));
+        panel.add(Box.createVerticalStrut(VERTICAL_SPACING_MEDIUM));
         panel.add(titleLabel);
-        panel.add(Box.createVerticalStrut(10));
+        panel.add(Box.createVerticalStrut(VERTICAL_SPACING_MEDIUM));
         panel.add(subTitleLabel);
-        panel.add(Box.createVerticalStrut(5));
+        panel.add(Box.createVerticalStrut(VERTICAL_SPACING_SMALL));
         panel.add(versionLabel);
-        panel.add(Box.createVerticalStrut(5));
+        panel.add(Box.createVerticalStrut(VERTICAL_SPACING_SMALL));
         panel.add(copyrightLabel);
-        panel.add(Box.createVerticalStrut(2));
+        panel.add(Box.createVerticalStrut(VERTICAL_SPACING_TINY));
         panel.add(licenseLabel);
-        panel.add(Box.createVerticalStrut(10));
+        panel.add(Box.createVerticalStrut(VERTICAL_SPACING_MEDIUM));
         
         // Add library information
-        try (InputStream inputStream = getClass().getResourceAsStream("/libraries.txt")) {
+        try (InputStream inputStream = getClass().getResourceAsStream(LIBRARIES_PATH)) {
             if (inputStream != null) {
                 String librariesContent = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
                 JTextArea librariesText = new JTextArea(librariesContent);
                 librariesText.setEditable(false);
-                librariesText.setBackground(new Color(250, 250, 250));
-                librariesText.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+                librariesText.setBackground(LIBRARIES_BACKGROUND);
+                librariesText.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, LIBRARIES_FONT_SIZE));
                 librariesText.setAlignmentX(Component.CENTER_ALIGNMENT);
-                librariesText.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+                librariesText.setBorder(BorderFactory.createEmptyBorder(
+                    TEXT_AREA_PADDING, TEXT_AREA_PADDING, 
+                    TEXT_AREA_PADDING, TEXT_AREA_PADDING));
                 
                 // Add text area to scroll pane
                 JScrollPane scrollPane = new JScrollPane(librariesText);
-                scrollPane.setPreferredSize(new Dimension(350, 120));
-                scrollPane.setBorder(BorderFactory.createLineBorder(new Color(240, 240, 240)));
+                scrollPane.setPreferredSize(new Dimension(LIBRARIES_WIDTH, LIBRARIES_HEIGHT));
+                scrollPane.setBorder(BorderFactory.createLineBorder(LIBRARIES_BORDER));
                 scrollPane.setAlignmentX(Component.CENTER_ALIGNMENT);
                 
                 panel.add(scrollPane);
@@ -110,9 +136,9 @@ public class AboutDialog extends JDialog {
         linkPanel.add(linkLabel);
         linkPanel.setOpaque(false);
         
-        panel.add(Box.createVerticalStrut(10));
+        panel.add(Box.createVerticalStrut(VERTICAL_SPACING_MEDIUM));
         panel.add(linkPanel);
-        panel.add(Box.createVerticalStrut(20));
+        panel.add(Box.createVerticalStrut(BORDER_PADDING));
         
         JButton closeButton = new JButton(bundle.getString("about_close"));
         closeButton.setAlignmentX(Component.CENTER_ALIGNMENT);
