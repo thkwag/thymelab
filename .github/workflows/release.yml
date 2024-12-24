@@ -339,7 +339,7 @@ jobs:
           ### Note
           The examples package contains template examples that can be used with any installation method.
 
-          **Full Changelog**: https://github.com/thkwag/thymelab/compare/v${{ github.event.before }}...v${{ github.ref_name }}
+          **Full Changelog**: https://github.com/thkwag/thymelab/compare/v${{ github.event.before }}...${{ github.ref_name }}
         files: |
           jar/thymelab-${{ env.VERSION }}.zip
           examples/thymelab-examples-${{ env.VERSION }}.zip
