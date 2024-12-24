@@ -6,10 +6,14 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 import org.springframework.lang.NonNull;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    @Value("${server.port:8080}")
+    private String serverPort;
 
     @Override
     public void configureMessageBroker(@NonNull MessageBrokerRegistry config) {
@@ -20,7 +24,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
         registry.addEndpoint("/hot-reload")
-                .setAllowedOrigins("http://localhost:8080")
+                .setAllowedOrigins("http://localhost:" + serverPort)
                 .withSockJS();
     }
-} 
+}
