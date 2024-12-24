@@ -25,7 +25,7 @@ ThymeLab is a development tool that enables designers and developers to create a
 ## Key Features
 
 <p align="center">
-   <img src="docs/images/thymelab-launcher.png" alt="ThymeLab Preview">
+   <img src="docs/images/thymelab-banner.png" alt="ThymeLab Preview">
 </p>
 
 ### Easy Template Development
