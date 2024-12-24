@@ -8,6 +8,7 @@ import com.github.thkwag.thymelab.launcher.ui.components.LogPanel;
 import com.github.thkwag.thymelab.launcher.ui.components.MainMenuBar;
 import com.github.thkwag.thymelab.launcher.ui.dialogs.AboutDialog;
 import com.github.thkwag.thymelab.launcher.util.AppLogger;
+import com.github.thkwag.thymelab.launcher.config.ConfigManager.LanguageChangeListener;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -15,10 +16,11 @@ import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.ResourceBundle;
 
-public class MainFrame extends JFrame {
+public class MainFrame extends JFrame implements LanguageChangeListener {
     private final ConfigManager config;
     private final LocaleManager localeManager;
     private ResourceBundle bundle;
@@ -64,6 +66,8 @@ public class MainFrame extends JFrame {
         this.localeManager = localeManager;
         this.bundle = localeManager.getBundle();
 
+        config.addLanguageChangeListener(this);
+
         mainForm = new MainForm(config);
         menuBar = mainForm.getMainMenuBar();
         setJMenuBar(menuBar);
@@ -88,6 +92,12 @@ public class MainFrame extends JFrame {
                 SwingUtilities.invokeLater(() -> startApp());
             }
         });
+    }
+
+    @Override
+    public void onLanguageChange(String languageCode) {
+        this.bundle = localeManager.getBundle();
+        updateTexts();
     }
 
     private void setupWindowListeners() {
@@ -146,7 +156,9 @@ public class MainFrame extends JFrame {
 
     private void updateLanguageCombo() {
         String langCode = getLanguageCode();
-        mainForm.setLanguageComboItem(langCode.equalsIgnoreCase("ko") ? "KO" : "EN");
+        Locale locale = Locale.forLanguageTag(langCode);
+        String displayLanguage = locale.getDisplayLanguage(locale);
+        mainForm.setLanguageComboItem(displayLanguage);
     }
 
     private String getLanguageCode() {
@@ -201,7 +213,7 @@ public class MainFrame extends JFrame {
         controlPanel.getLanguageCombo().addActionListener(e -> {
             String lang = (String) controlPanel.getLanguageCombo().getSelectedItem();
             if (lang != null) {
-                String code = lang.equals("KO") ? "ko" : "en";
+                String code = Locale.forLanguageTag(lang).toLanguageTag().toLowerCase();
                 config.setProperty("language", code);
                 updateLanguage();
             }

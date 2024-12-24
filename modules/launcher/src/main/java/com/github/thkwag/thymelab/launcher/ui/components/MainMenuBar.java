@@ -53,4 +53,13 @@ public class MainMenuBar extends JMenuBar {
 
     public JMenu getToolsMenu() { return toolsMenu; }
     public JMenu getHelpMenu() { return helpMenu; }
+
+    public void updateTexts(ResourceBundle bundle) {
+        toolsMenu.setText(bundle.getString("menu_tools"));
+        helpMenu.setText(bundle.getString("menu_help"));
+        programSettingsMenuItem.setText(bundle.getString("menu_program_settings"));
+        thymeleafSettingsMenuItem.setText(bundle.getString("menu_thymeleaf_settings"));
+        aboutMenuItem.setText(bundle.getString("menu_about"));
+        exitMenuItem.setText(bundle.getString("menu_exit"));
+    }
 } 

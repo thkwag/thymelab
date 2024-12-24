@@ -1,6 +1,7 @@
 package com.github.thkwag.thymelab.launcher.ui.dialogs;
 
 import com.github.thkwag.thymelab.launcher.config.ConfigManager;
+import com.github.thkwag.thymelab.launcher.config.ConfigManager.LanguageChangeListener;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -11,9 +12,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.ResourceBundle;
 
-public class AboutDialog extends JDialog {
+public class AboutDialog extends JDialog implements LanguageChangeListener {
     
     // Layout constants
     private static final int BORDER_PADDING = 20;
@@ -37,8 +39,17 @@ public class AboutDialog extends JDialog {
     private static final String ICON_PATH = "/icon.png";
     private static final String LIBRARIES_PATH = "/libraries.txt";
     
+    private ResourceBundle bundle;
+    private final JLabel titleLabel;
+    private final JLabel subTitleLabel;
+    private final JLabel copyrightLabel;
+    private final JLabel linkLabel;
+    private final JButton closeButton;
+
     public AboutDialog(Frame parent, ResourceBundle bundle, ConfigManager config) {
         super(parent, bundle.getString("about_title"), true);
+        this.bundle = bundle;
+        config.addLanguageChangeListener(this);
         setResizable(false);
         
         JPanel panel = new JPanel();
@@ -61,24 +72,24 @@ public class AboutDialog extends JDialog {
             e.printStackTrace();
         }
         
-        JLabel titleLabel = new JLabel(bundle.getString("app_title"));
+        titleLabel = new JLabel(bundle.getString("app_title"));
         titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, TITLE_FONT_SIZE));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
-        JLabel subTitleLabel = new JLabel(bundle.getString("sub_title"));
+        subTitleLabel = new JLabel(bundle.getString("sub_title"));
         subTitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
         JLabel versionLabel = new JLabel("Version " + config.getVersion());
         versionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
-        JLabel copyrightLabel = new JLabel(bundle.getString("about_copyright"));
+        copyrightLabel = new JLabel(bundle.getString("about_copyright"));
         copyrightLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
         JLabel licenseLabel = new JLabel("MIT License");
         licenseLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         licenseLabel.setForeground(LINK_COLOR);
         
-        JLabel linkLabel = new JLabel("<html><a href='" + bundle.getString("about_link") + "'>" + 
+        linkLabel = new JLabel("<html><a href='" + bundle.getString("about_link") + "'>" + 
             bundle.getString("about_link") + "</a></html>");
         linkLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         linkLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -140,7 +151,7 @@ public class AboutDialog extends JDialog {
         panel.add(linkPanel);
         panel.add(Box.createVerticalStrut(BORDER_PADDING));
         
-        JButton closeButton = new JButton(bundle.getString("about_close"));
+        closeButton = new JButton(bundle.getString("about_close"));
         closeButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         closeButton.addActionListener(e -> setVisible(false));
         panel.add(closeButton);
@@ -148,5 +159,21 @@ public class AboutDialog extends JDialog {
         add(panel);
         pack();
         setLocationRelativeTo(parent);
+    }
+
+    @Override
+    public void onLanguageChange(String languageCode) {
+        this.bundle = ResourceBundle.getBundle("messages", Locale.forLanguageTag(languageCode));
+        updateTexts();
+    }
+
+    private void updateTexts() {
+        setTitle(bundle.getString("about_title"));
+        titleLabel.setText(bundle.getString("app_title"));
+        subTitleLabel.setText(bundle.getString("sub_title"));
+        copyrightLabel.setText(bundle.getString("about_copyright"));
+        linkLabel.setText("<html><a href='" + bundle.getString("about_link") + "'>" + 
+            bundle.getString("about_link") + "</a></html>");
+        closeButton.setText(bundle.getString("about_close"));
     }
 } 

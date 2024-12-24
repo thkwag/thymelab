@@ -42,7 +42,11 @@ public class SettingsDialog extends JDialog {
     // Default values
     private static final int DEFAULT_BUFFER_SIZE = 1000;
     private static final String DEFAULT_LANGUAGE = "en";
-    private static final String[] SUPPORTED_LANGUAGES = {"EN", "KO"};
+    private static final String[][] SUPPORTED_LANGUAGES = {
+        {"en", "English"},
+        {"ko", "한국어"},
+        {"ja", "日本語"}
+    };
 
     // Layout constants
     private static final int BORDER_PADDING = 10;
@@ -67,7 +71,13 @@ public class SettingsDialog extends JDialog {
     private void initializeComponents() {
         fontCombo = new JComboBox<>(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
         fontSizeSpinner = new JSpinner(new SpinnerNumberModel(DEFAULT_FONT_SIZE, MIN_FONT_SIZE, MAX_FONT_SIZE, FONT_SIZE_STEP));
-        languageCombo = new JComboBox<>(SUPPORTED_LANGUAGES);
+        
+        // Initialize language combo with display names
+        languageCombo = new JComboBox<>();
+        for (String[] lang : SUPPORTED_LANGUAGES) {
+            languageCombo.addItem(lang[1]);
+        }
+
         logBufferField = new JTextField(TEXT_FIELD_COLUMNS);
         portSpinner = new JSpinner(new SpinnerNumberModel(DEFAULT_PORT, MIN_PORT, MAX_PORT, 1));
         JSpinner.NumberEditor portEditor = new JSpinner.NumberEditor(portSpinner, "#");
@@ -92,11 +102,10 @@ public class SettingsDialog extends JDialog {
         });
 
         languageCombo.addActionListener(e -> {
-            String lang = (String) languageCombo.getSelectedItem();
-            if (lang != null) {
-                String code = lang.equals("KO") ? "ko" : "en";
-                config.setProperty("language", code);
-                config.save();
+            int selectedIndex = languageCombo.getSelectedIndex();
+            if (selectedIndex >= 0) {
+                String code = SUPPORTED_LANGUAGES[selectedIndex][0];
+                config.changeLanguage(code);
                 // Update dialog language
                 this.bundle = ResourceBundle.getBundle("messages", 
                     Locale.forLanguageTag(code));
@@ -241,7 +250,15 @@ public class SettingsDialog extends JDialog {
         // Set current values to controls
         fontCombo.setSelectedItem(currentFont);
         fontSizeSpinner.setValue(currentSize);
-        languageCombo.setSelectedItem(currentLang.equalsIgnoreCase("ko") ? "KO" : "EN");
+        
+        // Set language
+        for (int i = 0; i < SUPPORTED_LANGUAGES.length; i++) {
+            if (SUPPORTED_LANGUAGES[i][0].equals(currentLang)) {
+                languageCombo.setSelectedIndex(i);
+                break;
+            }
+        }
+        
         logBufferField.setText(String.valueOf(currentBuffer));
         portSpinner.setValue(currentPort);
     }
@@ -252,12 +269,14 @@ public class SettingsDialog extends JDialog {
         int selectedSize = (Integer) fontSizeSpinner.getValue();
         config.setProperty("font.family", selectedFont);
         config.setInt("font.size", selectedSize);
-        
+
         // Save language settings
-        String lang = (String) languageCombo.getSelectedItem();
-        assert lang != null;
-        config.setProperty("language", lang.equals("KO") ? "ko" : "en");
-        
+        int selectedIndex = languageCombo.getSelectedIndex();
+        if (selectedIndex >= 0) {
+            String code = SUPPORTED_LANGUAGES[selectedIndex][0];
+            config.setProperty("language", code);
+        }
+
         // Save log buffer size
         try {
             int bufferSize = Integer.parseInt(logBufferField.getText().trim());
@@ -267,7 +286,7 @@ public class SettingsDialog extends JDialog {
         } catch (NumberFormatException ex) {
             // Ignore invalid input
         }
-        
+
         // Save port setting
         int port = (Integer) portSpinner.getValue();
         if (port >= MIN_PORT && port <= MAX_PORT) {

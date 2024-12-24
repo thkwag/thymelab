@@ -27,7 +27,7 @@ public class LocaleManager {
         } catch (MissingResourceException e) {
             logger.warning("Failed to load resource bundle for locale " + currentLocale + ": " + e.getMessage());
             try {
-                bundle = ResourceBundle.getBundle("messages", Locale.ENGLISH, this.getClass().getClassLoader());
+                bundle = ResourceBundle.getBundle("messages", Locale.getDefault(), this.getClass().getClassLoader());
             } catch (MissingResourceException ex) {
                 logger.severe("Failed to load fallback resource bundle: " + ex.getMessage());
                 throw new RuntimeException("Failed to load any resource bundle", ex);
@@ -36,15 +36,14 @@ public class LocaleManager {
     }
 
     public void setLanguage(String lang) {
-        if (lang.equalsIgnoreCase("ko")) {
-            currentLocale = Locale.KOREAN;
-        } else {
-            currentLocale = Locale.ENGLISH;
+        Locale newLocale = Locale.forLanguageTag(lang);
+        if (!newLocale.equals(currentLocale)) {
+            currentLocale = newLocale;
+            bundle = null;  // Invalidate bundle when language changes
         }
-        bundle = null;  // Invalidate bundle when language changes
     }
 
     public String getCurrentLanguage() {
-        return currentLocale == Locale.KOREAN ? "ko" : "en";
+        return currentLocale.toLanguageTag();
     }
 } 

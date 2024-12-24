@@ -8,6 +8,7 @@ import com.github.thkwag.thymelab.launcher.ui.components.MainMenuBar;
 import com.github.thkwag.thymelab.launcher.ui.dialogs.AboutDialog;
 import com.github.thkwag.thymelab.launcher.ui.dialogs.SettingsDialog;
 import com.github.thkwag.thymelab.launcher.ui.dialogs.ThymeleafSettingsDialog;
+import com.github.thkwag.thymelab.launcher.config.ConfigManager.LanguageChangeListener;
 
 import javax.swing.*;
 import java.awt.*;
@@ -16,7 +17,7 @@ import java.awt.event.WindowEvent;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
-public class MainForm extends JFrame {
+public class MainForm extends JFrame implements LanguageChangeListener {
     private final JPanel mainPanel;
     private final LogPanel logPanel;
     private final ControlPanel controlPanel;
@@ -34,6 +35,7 @@ public class MainForm extends JFrame {
 
     public MainForm(ConfigManager config) {
         this.config = config;
+        config.addLanguageChangeListener(this);
         
         mainPanel = new JPanel(new BorderLayout(BORDER_SPACING, VERTICAL_SPACING));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(PANEL_PADDING, PANEL_PADDING, PANEL_PADDING, PANEL_PADDING));
@@ -204,5 +206,13 @@ public class MainForm extends JFrame {
         controlPanel.getStartButton().addActionListener(e -> startProcess());
         controlPanel.getStopButton().addActionListener(e -> stopProcess());
     
+    }
+
+    @Override
+    public void onLanguageChange(String languageCode) {
+        ResourceBundle bundle = ResourceBundle.getBundle("messages", Locale.forLanguageTag(languageCode));
+        menuBar.updateTexts(bundle);
+        controlPanel.updateTexts(bundle);
+        // Update other components as needed
     }
 } 

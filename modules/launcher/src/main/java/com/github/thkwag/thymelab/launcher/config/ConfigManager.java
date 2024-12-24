@@ -6,11 +6,14 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ConfigManager {
     private final Properties props = new Properties();
     private final String path;
     private final String version = loadVersion();
+    private final List<LanguageChangeListener> listeners = new ArrayList<>();
 
     // Version related constants
     private static final String VERSION_NOT_FOUND = "not-found";
@@ -20,6 +23,20 @@ public class ConfigManager {
 
     public ConfigManager(String path) {
         this.path = path;
+    }
+
+    public void addLanguageChangeListener(LanguageChangeListener listener) {
+        listeners.add(listener);
+    }
+
+    public void removeLanguageChangeListener(LanguageChangeListener listener) {
+        listeners.remove(listener);
+    }
+
+    private void notifyLanguageChange(String languageCode) {
+        for (LanguageChangeListener listener : listeners) {
+            listener.onLanguageChange(languageCode);
+        }
     }
 
     private String loadVersion() {
@@ -135,5 +152,15 @@ public class ConfigManager {
 
     public String getVersion() {
         return version;
+    }
+
+    public void changeLanguage(String languageCode) {
+        setProperty("language", languageCode);
+        save();
+        notifyLanguageChange(languageCode);
+    }
+
+    public interface LanguageChangeListener {
+        void onLanguageChange(String languageCode);
     }
 } 

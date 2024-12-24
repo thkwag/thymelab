@@ -9,6 +9,8 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
+import java.util.Locale;
+import java.util.ResourceBundle;
 
 public class ControlPanel extends JPanel {
     private JButton startButton;
@@ -56,7 +58,7 @@ public class ControlPanel extends JPanel {
     // Default settings
     private static final int DEFAULT_PORT = 8080;
     private static final String[] LOG_LEVELS = {"INFO", "DEBUG", "WARN", "ERROR"};
-    private static final String[] SUPPORTED_LANGUAGES = {"EN", "KO"};
+    private static final String[] SUPPORTED_LANGUAGES = {"en", "ko", "ja"};
 
     // Endpoint paths
     private static final String ENDPOINT_ACTUATOR_HEALTH = "/actuator/health";
@@ -115,7 +117,8 @@ public class ControlPanel extends JPanel {
         }
         
         for (String lang : SUPPORTED_LANGUAGES) {
-            languageCombo.addItem(lang);
+            Locale locale = Locale.forLanguageTag(lang);
+            languageCombo.addItem(locale.getDisplayLanguage(locale).toUpperCase());
         }
         
         // Initialize URL label
@@ -339,5 +342,16 @@ public class ControlPanel extends JPanel {
         urlLabel.setVisible(false);
         statusIndicator.setVisible(false);
         blinkTimer.stop();
+    }
+
+    public void updateTexts(ResourceBundle bundle) {
+        startButton.setText(bundle.getString("start"));
+        stopButton.setText(bundle.getString("stop"));
+        clearLogButton.setText(bundle.getString("clear_log"));
+        logLevelLabel.setText(bundle.getString("log_level"));
+        logBufferLabel.setText(bundle.getString("log_buffer_size"));
+        languageLabel.setText(bundle.getString("language"));
+        logBufferUnitLabel.setText(bundle.getString("lines"));
+        fontSettingsLabel.setText(bundle.getString("font") + " / " + bundle.getString("font_size"));
     }
 } 

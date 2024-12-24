@@ -1,15 +1,17 @@
 package com.github.thkwag.thymelab.launcher.ui.dialogs;
 
 import com.github.thkwag.thymelab.launcher.config.ConfigManager;
+import com.github.thkwag.thymelab.launcher.config.ConfigManager.LanguageChangeListener;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.util.Locale;
 import java.util.ResourceBundle;
 
-public class ThymeleafSettingsDialog extends JDialog {
+public class ThymeleafSettingsDialog extends JDialog implements LanguageChangeListener {
     private final ConfigManager config;
-    private final ResourceBundle bundle;
+    private ResourceBundle bundle;
     private JTextField staticFolderField;
     private JTextField templatesFolderField;
     private JTextField dataFolderField;
@@ -34,6 +36,7 @@ public class ThymeleafSettingsDialog extends JDialog {
         super(parent, bundle.getString("menu_thymeleaf_settings"), true);
         this.config = config;
         this.bundle = bundle;
+        config.addLanguageChangeListener(this);
         
         // Reload configuration file
         config.loadProperties();
@@ -42,6 +45,20 @@ public class ThymeleafSettingsDialog extends JDialog {
         initializeComponents();
         layoutComponents();
         initializeValues();
+    }
+
+    @Override
+    public void onLanguageChange(String languageCode) {
+        this.bundle = ResourceBundle.getBundle("messages", Locale.forLanguageTag(languageCode));
+        updateTexts();
+    }
+
+    private void updateTexts() {
+        setTitle(bundle.getString("menu_thymeleaf_settings"));
+        // Update other UI components with new language texts
+        // Example:
+        // saveButton.setText(bundle.getString("save"));
+        // Update other components as needed
     }
 
     private void initializeComponents() {
