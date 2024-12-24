@@ -15,19 +15,25 @@ import java.awt.event.WindowEvent;
 import javax.imageio.ImageIO;
 
 import java.util.Locale;
+import java.util.Objects;
 import java.util.ResourceBundle;
+import java.awt.image.BufferedImage;
+import java.awt.Graphics2D;
 
 public class MainFrame extends JFrame {
     private final ConfigManager config;
     private final LocaleManager localeManager;
     private ResourceBundle bundle;
 
-    private AppProcessManager appProcessManager;
-    private MainForm mainForm;
+    private final AppProcessManager appProcessManager;
+    private final MainForm mainForm;
     private ControlPanel controlPanel;
-    private MainMenuBar menuBar;
+    private final MainMenuBar menuBar;
 
     private TrayIcon trayIcon;
+    private MenuItem showHideMenuItem;
+    private MenuItem exitMenuItem;
+    private boolean isRunning = false;
 
     public MainFrame(ConfigManager config, LocaleManager localeManager) {
         this.config = config;
@@ -80,7 +86,7 @@ public class MainFrame extends JFrame {
 
         // Initialize process manager
         appProcessManager = new AppProcessManager(
-            line -> mainForm.appendLog(line), 
+                mainForm::appendLog,
             () -> SwingUtilities.invokeLater(() -> updateButtonStates(false)),
             config
         );
@@ -96,7 +102,7 @@ public class MainFrame extends JFrame {
 
         setupTrayIcon();
 
-        // 창이 표시된 후에 프로세스 시작
+        // Start process after window is shown
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowOpened(WindowEvent e) {
@@ -198,11 +204,22 @@ public class MainFrame extends JFrame {
         controlPanel.getLogBufferUnit().setText(bundle.getString("lines"));
         controlPanel.setFontSettingsText(bundle.getString("font"), bundle.getString("font_size"));
         
-        // 제목 업데이트 추가
+        // Update title
         String title = String.format("%s - %s", 
             bundle.getString("app_title"), 
             bundle.getString("sub_title"));
         setTitle(title);
+
+        // Update tray icon text and menu
+        if (trayIcon != null) {
+            trayIcon.setToolTip(getTooltipText());
+            if (showHideMenuItem != null) {
+                showHideMenuItem.setLabel(isVisible() ? bundle.getString("hide") : bundle.getString("show"));
+            }
+            if (exitMenuItem != null) {
+                exitMenuItem.setLabel(bundle.getString("menu_exit"));
+            }
+        }
     }
 
     public void loadWindowState() {
@@ -212,20 +229,20 @@ public class MainFrame extends JFrame {
         int y = config.getInt("window.y", 150);
         int state = config.getInt("window.state", Frame.NORMAL);
 
-        // 화면 크기 설정
+        // Set screen size
         setSize(width, height);
         
-        // 모든 화면의 영역을 확인
+        // Check all screen areas
         Rectangle virtualBounds = new Rectangle();
         for (GraphicsDevice screen : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
             virtualBounds = virtualBounds.union(screen.getDefaultConfiguration().getBounds());
         }
 
-        // 저장된 위치가 유효한지 확인
+        // Verify if saved position is valid
         if (!virtualBounds.contains(x, y)) {
-            // 화면 중앙에 위치킴
-            x = (int) (virtualBounds.getCenterX() - width / 2);
-            y = (int) (virtualBounds.getCenterY() - height / 2);
+            // Position at screen center
+            x = (int) (virtualBounds.getCenterX() - (double) width / 2);
+            y = (int) (virtualBounds.getCenterY() - (double) height / 2);
         }
 
         setLocation(x, y);
@@ -247,6 +264,9 @@ public class MainFrame extends JFrame {
     @Override
     public void setVisible(boolean visible) {
         super.setVisible(visible);
+        if (showHideMenuItem != null) {
+            showHideMenuItem.setLabel(visible ? bundle.getString("hide") : bundle.getString("show"));
+        }
     }
 
     public void updateFromSettings() {
@@ -267,69 +287,103 @@ public class MainFrame extends JFrame {
     }
 
     private void onProcessStart() {
-        mainForm.getControlPanel().getStartButton().setEnabled(false);
-        mainForm.getControlPanel().getStopButton().setEnabled(true);
-        mainForm.getControlPanel().onProcessStarted();
+        isRunning = true;
+        updateTrayIcon();
     }
 
     private void onProcessStop() {
-        mainForm.getControlPanel().getStartButton().setEnabled(true);
-        mainForm.getControlPanel().getStopButton().setEnabled(false);
-        mainForm.getControlPanel().onProcessStopped();
+        isRunning = false;
+        updateTrayIcon();
     }
 
     private void setupTrayIcon() {
-        if (!SystemTray.isSupported()) {
-            setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            return;
-        }
-
-        try {
+        if (SystemTray.isSupported()) {
             SystemTray tray = SystemTray.getSystemTray();
-            
-            // Load tray icon image
-            Image iconImage = ImageIO.read(getClass().getResourceAsStream("/icon.png"));
-            int trayIconSize = (int) tray.getTrayIconSize().getHeight();
-            Image scaledImage = iconImage.getScaledInstance(trayIconSize, trayIconSize, Image.SCALE_SMOOTH);
-            
-            // Create popup menu
             PopupMenu popup = new PopupMenu();
-            
-            MenuItem showItem = new MenuItem("Show");
-            showItem.addActionListener(e -> {
-                setVisible(true);
-                setExtendedState(JFrame.NORMAL);
-            });
-            popup.add(showItem);
-            
+
+            // Show/Hide menu item
+            showHideMenuItem = new MenuItem(bundle.getString("show"));
+            showHideMenuItem.addActionListener(e -> toggleVisibility());
+            popup.add(showHideMenuItem);
+
+            // Add separator
             popup.addSeparator();
-            
-            MenuItem exitItem = new MenuItem("Exit");
-            exitItem.addActionListener(e -> {
-                tray.remove(trayIcon);
+
+            // Exit menu item
+            exitMenuItem = new MenuItem(bundle.getString("menu_exit"));
+            exitMenuItem.addActionListener(e -> {
+                if (SystemTray.isSupported()) {
+                    tray.remove(trayIcon);
+                }
                 saveWindowState();
                 System.exit(0);
             });
-            popup.add(exitItem);
-            
-            // Create tray icon
-            String trayTitle = String.format("%s - %s", 
-                bundle.getString("app_title"), 
-                bundle.getString("sub_title"));
-            trayIcon = new TrayIcon(scaledImage, trayTitle, popup);
-            trayIcon.setImageAutoSize(true);
-            
-            // Restore window on double click
-            trayIcon.addActionListener(e -> {
-                setVisible(true);
-                setExtendedState(JFrame.NORMAL);
-            });
-            
-            tray.add(trayIcon);
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-            setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            popup.add(exitMenuItem);
+
+            try {
+                // Try multiple icon paths
+                Image image = null;
+                String[] iconPaths = {"/icon.png", "/images/icon.png", "/icons/icon.png"};
+                
+                for (String path : iconPaths) {
+                    try {
+                        image = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream(path)));
+                        if (image != null) break;
+                    } catch (Exception ignored) {}
+                }
+                
+                // If no icon found, create a default one
+                if (image == null) {
+                    image = createDefaultIcon();
+                }
+                
+                trayIcon = new TrayIcon(image, getTooltipText(), popup);
+                trayIcon.setImageAutoSize(true);
+                trayIcon.addActionListener(e -> toggleVisibility());
+                
+                try {
+                    tray.add(trayIcon);
+                } catch (AWTException e) {
+                    System.err.println("Could not add system tray icon: " + e.getMessage());
+                }
+            } catch (Exception e) {
+                System.err.println("Could not setup system tray icon: " + e.getMessage());
+            }
+        }
+    }
+
+    private Image createDefaultIcon() {
+        // Create a simple default icon (16x16 pixels)
+        BufferedImage image = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = image.createGraphics();
+        g2d.setColor(Color.GREEN);
+        g2d.fillRect(0, 0, 16, 16);
+        g2d.setColor(Color.BLACK);
+        g2d.drawRect(0, 0, 15, 15);
+        g2d.dispose();
+        return image;
+    }
+
+    private void toggleVisibility() {
+        if (isVisible()) {
+            setVisible(false);
+            showHideMenuItem.setLabel(bundle.getString("show"));
+        } else {
+            setVisible(true);
+            setState(Frame.NORMAL);
+            showHideMenuItem.setLabel(bundle.getString("hide"));
+        }
+    }
+
+    private String getTooltipText() {
+        String status = isRunning ? bundle.getString("running") : bundle.getString("stopped");
+        return String.format("%s - %s", bundle.getString("app_title"), status);
+    }
+
+    private void updateTrayIcon() {
+        if (trayIcon != null) {
+            trayIcon.setToolTip(getTooltipText());
+            showHideMenuItem.setLabel(isVisible() ? bundle.getString("hide") : bundle.getString("show"));
         }
     }
 
@@ -337,11 +391,11 @@ public class MainFrame extends JFrame {
         try {
             // Set platform-specific icon
             if (System.getProperty("os.name").toLowerCase().contains("mac")) {
-                setIconImage(ImageIO.read(getClass().getResourceAsStream("/icon.icns")));
+                setIconImage(ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/icon.icns"))));
             } else if (System.getProperty("os.name").toLowerCase().contains("windows")) {
-                setIconImage(ImageIO.read(getClass().getResourceAsStream("/icon.ico")));
+                setIconImage(ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/icon.ico"))));
             } else {
-                setIconImage(ImageIO.read(getClass().getResourceAsStream("/icon.png")));
+                setIconImage(ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/icon.png"))));
             }
         } catch (Exception e) {
             // ignore
