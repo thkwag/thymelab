@@ -1,3 +1,19 @@
+# Release Workflow
+# This workflow is triggered when a version tag is pushed and performs the following:
+#
+# 1. Version Verification:
+#    - Checks if the version in version.properties matches the tag version
+#    - Fails if versions don't match, preventing accidental mismatched releases
+#
+# 2. Build Process:
+#    - Only proceeds if version verification passes
+#    - Builds the application and creates release artifacts
+#
+# To create a release:
+# 1. Update version.properties with the new version
+# 2. Commit and push the change
+# 3. Create and push a tag matching the version (e.g., v1.0.0)
+
 name: Build and Release
 
 on:
@@ -10,7 +26,53 @@ env:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false"
 
 jobs:
+  verify-version:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Set version
+      run: |
+        # Remove 'v' prefix and trim any whitespace
+        VERSION=$(echo "${GITHUB_REF_NAME#v}" | tr -d '[:space:]')
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Check version.properties
+      id: check_version
+      run: |
+        # Check if file exists
+        if [ ! -f "version.properties" ]; then
+          echo "::error::version.properties file not found"
+          exit 1
+        fi
+
+        # Read and validate version
+        CURRENT_VERSION=$(grep -E "^[[:space:]]*version[[:space:]]*=[[:space:]]*[^[:space:]]" version.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
+        
+        # Check if version was found
+        if [ -z "$CURRENT_VERSION" ]; then
+          echo "::error::No valid version found in version.properties"
+          exit 1
+        fi
+        
+        # Debug output
+        echo "Current version from properties: '$CURRENT_VERSION'"
+        echo "Version from tag: '${{ env.VERSION }}'"
+        
+        # Compare versions (case-sensitive)
+        if [ "$CURRENT_VERSION" != "${{ env.VERSION }}" ]; then
+          echo "::error::Version mismatch: version.properties ($CURRENT_VERSION) does not match tag (${{ env.VERSION }})"
+          exit 1
+        fi
+        
+        echo "Version check passed: $CURRENT_VERSION"
+        echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
   build-jar:
+    needs: verify-version
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -25,11 +87,11 @@ jobs:
         java-version: ${{ env.JAVA_VERSION }}
         cache: 'gradle'
 
-    - name: Make gradlew executable
-      run: chmod +x ./gradlew
-
     - name: Set version
       run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
 
     - name: Debug version
       run: echo "VERSION is set to ${{ env.VERSION }}"
