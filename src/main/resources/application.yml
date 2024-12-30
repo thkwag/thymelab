@@ -1,7 +1,9 @@
 spring:
   application:
     title: ThymeLab
-    version: v1.0.0
+    version: ${version}
+  config:
+    import: classpath:version.properties
   thymeleaf:
     cache: false
     check-template-location: false
