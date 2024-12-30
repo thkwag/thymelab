@@ -1,7 +1,6 @@
 (() => {
     let stompClient = null;
     let retryCount = 0;
-    const maxRetries = 5;
     let dotCount = 0;
     let retryInterval = null;
 
@@ -39,7 +38,7 @@
         stompClient.connect({},
             () => {
                 console.log('[hot-reload] connected');
-                removeStatusBar();
+                showSuccessBar();
                 retryCount = 0;
                 clearInterval(retryInterval);
                 retryInterval = null;
@@ -65,33 +64,14 @@
             stompClient = null;
         }
 
-        if (retryCount < maxRetries) {
-            retryCount++;
-            dotCount = 0;
-            console.log(`[hot-reload] retrying... (${retryCount}/${maxRetries})`);
-            updateRetryingMessage();
-            if (!retryInterval) {
-                retryInterval = setInterval(updateRetryingMessage, 500);
-            }
-            setTimeout(connect, 2000);
-        } else {
-            clearInterval(retryInterval);
-            retryInterval = null;
-            const refreshLink = document.createElement('a');
-            refreshLink.href = '#';
-            refreshLink.textContent = 'Click here to refresh';
-            refreshLink.style.color = 'yellow';
-            refreshLink.style.textDecoration = 'underline';
-            refreshLink.style.cursor = 'pointer';
-            refreshLink.style.userSelect = 'none';
-            refreshLink.addEventListener('click', reloadPage);
-            
-            const message = document.createElement('div');
-            message.textContent = 'Connection lost. ';
-            message.appendChild(refreshLink);
-            
-            showStatusBar(message);
+        dotCount = 0;
+        updateRetryingMessage();
+        
+        if (!retryInterval) {
+            retryInterval = setInterval(updateRetryingMessage, 500);
         }
+        
+        setTimeout(connect, 2000);
     }
 
     function updateRetryingMessage() {
@@ -115,6 +95,8 @@
             statusBar.style.padding = '2px';
             statusBar.style.paddingLeft = '20px';
             statusBar.style.zIndex = '999999';
+            statusBar.style.fontSize = '11px';
+            statusBar.style.fontFamily = 'Consolas, monospace';
             document.body.appendChild(statusBar);
         }
         
@@ -130,6 +112,15 @@
         const statusBar = document.getElementById('connection-status-bar');
         if (statusBar) {
             document.body.removeChild(statusBar);
+        }
+    }
+
+    function showSuccessBar() {
+        let statusBar = document.getElementById('connection-status-bar');
+        if (statusBar) {
+            statusBar.style.backgroundColor = '#28a745';
+            statusBar.textContent = 'Connected';
+            setTimeout(removeStatusBar, 2000);
         }
     }
 

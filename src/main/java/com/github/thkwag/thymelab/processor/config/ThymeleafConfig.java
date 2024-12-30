@@ -55,6 +55,21 @@ public class ThymeleafConfig {
         resolver.setCharacterEncoding("UTF-8");
         resolver.setCacheable(false);
         resolver.setCheckExistence(true);
+        resolver.setOrder(0);
+        return resolver;
+    }
+
+    @Bean
+    public SpringResourceTemplateResolver internalTemplateResolver() {
+        SpringResourceTemplateResolver resolver = new SpringResourceTemplateResolver();
+        resolver.setApplicationContext(applicationContext);
+        resolver.setPrefix("classpath:/default/templates/");
+        resolver.setSuffix(".html");
+        resolver.setTemplateMode(TemplateMode.HTML);
+        resolver.setCharacterEncoding("UTF-8");
+        resolver.setCacheable(true);
+        resolver.setCheckExistence(true);
+        resolver.setOrder(1);
         return resolver;
     }
 
@@ -62,6 +77,7 @@ public class ThymeleafConfig {
     public SpringTemplateEngine templateEngine() {
         SpringTemplateEngine engine = new SpringTemplateEngine();
         engine.setTemplateResolver(templateResolver());
+        engine.addTemplateResolver(internalTemplateResolver());
         engine.addDialect(new LayoutDialect());
         engine.setEnableSpringELCompiler(true);
         return engine;
