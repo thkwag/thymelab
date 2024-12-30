@@ -1,0 +1,210 @@
+# Release Workflow
+# This workflow is triggered when a version tag is pushed and performs the following:
+#
+# 1. Version Verification:
+#    - Checks if the version in version.properties matches the tag version
+#    - Fails if versions don't match, preventing accidental mismatched releases
+#
+# 2. Build Process:
+#    - Only proceeds if version verification passes
+#    - Builds the application and creates release artifacts
+#
+# To create a release:
+# 1. Update version.properties with the new version
+# 2. Commit and push the change
+# 3. Create and push a tag matching the version (e.g., v1.0.0)
+
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'  # Semantic versioning tags only
+
+env:
+  JAVA_VERSION: '17'
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+
+jobs:
+  verify-version:
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set version
+      id: get_version
+      run: |
+        VERSION=$(echo "${GITHUB_REF_NAME#v}" | tr -d '[:space:]')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Check version.properties
+      id: check_version
+      run: |
+        if [ ! -f "version.properties" ]; then
+          echo "::error::version.properties file not found"
+          exit 1
+        fi
+
+        CURRENT_VERSION=$(grep -E "^[[:space:]]*version[[:space:]]*=[[:space:]]*[^[:space:]]" version.properties | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]')
+        
+        if [ -z "$CURRENT_VERSION" ]; then
+          echo "::error::No valid version found in version.properties"
+          exit 1
+        fi
+        
+        echo "Current version from properties: '$CURRENT_VERSION'"
+        echo "Version from tag: '${{ steps.get_version.outputs.version }}'"
+        
+        if [ "$CURRENT_VERSION" != "${{ steps.get_version.outputs.version }}" ]; then
+          echo "::error::Version mismatch: version.properties ($CURRENT_VERSION) does not match tag (${{ steps.get_version.outputs.version }})"
+          exit 1
+        fi
+        
+        echo "Version check passed: $CURRENT_VERSION"
+
+  build-jar:
+    needs: verify-version
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: ${{ env.JAVA_VERSION }}
+        cache: 'gradle'
+
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
+
+    - name: Build Processor JAR
+      run: |
+        ./gradlew clean bootJar -Pversion=${{ needs.verify-version.outputs.version }} --stacktrace || {
+          echo "Build failed. Checking logs..."
+          find . -name "*.log" -type f -exec cat {} \;
+          exit 1
+        }
+
+    - name: Prepare distribution
+      run: |
+        cp "build/libs/thymelab-processor-${{ needs.verify-version.outputs.version }}.jar" ./
+
+    - name: Upload JAR artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: jar
+        path: thymelab-processor-${{ needs.verify-version.outputs.version }}.jar
+        retention-days: 5
+
+  package-examples:
+    needs: verify-version
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create examples archive
+      run: |
+        if [ ! -d "examples" ]; then
+          echo "Examples directory not found"
+          exit 1
+        fi
+        zip -r "thymelab-examples-${{ needs.verify-version.outputs.version }}.zip" examples/
+
+    - name: Upload examples artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: examples
+        path: thymelab-examples-*.zip
+        retention-days: 5
+
+  create-release:
+    needs: [verify-version, build-jar, package-examples]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get Changes
+      id: get_changes
+      run: |
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+        echo "Previous tag: $PREV_TAG"
+        
+        if [ -z "$PREV_TAG" ]; then
+          CHANGES=$(git log --pretty=format:"- %s (%h)")
+        elif [ "$PREV_TAG" = "${{ github.ref_name }}" ]; then
+          CHANGES="No changes (first release or re-release)"
+        else
+          CHANGES=$(git log --pretty=format:"- %s (%h)" ${PREV_TAG}..HEAD)
+        fi
+        
+        EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+        echo "changes<<$EOF" >> "$GITHUB_OUTPUT"
+        echo "$CHANGES" >> "$GITHUB_OUTPUT"
+        echo "$EOF" >> "$GITHUB_OUTPUT"
+
+    - name: Download JAR artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: jar
+        path: release-files
+
+    - name: Download examples artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: examples
+        path: release-files
+
+    - name: List files
+      run: ls -R
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: ThymeLab ${{ github.ref_name }}
+        body: |
+          ## ThymeLab ${{ github.ref_name }}
+
+          ### Downloads
+          - **thymelab-processor-${{ needs.verify-version.outputs.version }}.jar**: Standalone processor JAR
+          - **thymelab-examples-${{ needs.verify-version.outputs.version }}.zip**: Template examples and resources
+
+          ### Running the Processor
+          Run the processor JAR with Java 17 or higher:
+          ```bash
+          java -jar thymelab-processor-${{ needs.verify-version.outputs.version }}.jar \
+              -Dserver.port=8080 \
+              -Dlogging.level.com.github.thkwag.thymelab=INFO \
+              -Dwatch.directory.templates=/path/to/templates \
+              -Dwatch.directory.thymeleaf-data=/path/to/thymelab/data \
+              -Dwatch.directory.static=/path/to/static
+          ```
+
+          ### Note
+          The examples package contains template examples that can be used with ThymeLab Processor.
+          For configuration options, please refer to the documentation.
+
+          ### What's Changed
+          ${{ steps.get_changes.outputs.changes }}
+        files: |
+          release-files/thymelab-processor-${{ needs.verify-version.outputs.version }}.jar
+          release-files/thymelab-examples-${{ needs.verify-version.outputs.version }}.zip
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

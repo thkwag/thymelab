@@ -1,0 +1,89 @@
+buildscript {
+	ext {
+		// Plugins
+		springBootVersion = '3.2.3'
+		springDependencyManagementVersion = '1.1.6'
+		lombokPluginVersion = '8.6'
+		
+		// Dependencies
+		thymeleafLayoutVersion = '3.3.0'
+		jsr305Version = '3.0.2'
+		mockitoVersion = '5.3.1'
+	}
+	repositories {
+		mavenCentral()
+		gradlePluginPortal()
+	}
+}
+
+plugins {
+	id 'java-library'
+	id 'org.springframework.boot' version "$springBootVersion"
+	id 'io.spring.dependency-management' version "$springDependencyManagementVersion"
+	id 'io.freefair.lombok' version "$lombokPluginVersion"
+}
+
+repositories {
+	mavenCentral()
+}
+
+def loadVersion() {
+	def versionFile = file('version.properties')
+	if (versionFile.exists()) {
+		 Properties props = new Properties()
+		 props.load(new FileInputStream(versionFile))
+		 return props.getProperty('version').trim()
+	}
+	throw new GradleException("Version file not found. Build failed.")
+}
+
+project.version = loadVersion()
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation "nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect:$thymeleafLayoutVersion"
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
+	implementation 'jakarta.servlet:jakarta.servlet-api'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	
+	compileOnly 'org.projectlombok:lombok'
+	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
+	annotationProcessor 'org.projectlombok:lombok'
+	
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation "org.mockito:mockito-core:$mockitoVersion"
+	testImplementation "org.mockito:mockito-junit-jupiter:$mockitoVersion"
+}
+
+bootJar {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	enabled = true
+	mainClass = 'com.github.thkwag.thymelab.processor.ThymeLabProcessorApplication'
+	archiveFileName = "thymelab-processor-${project.version}.jar"
+}
+
+jar {
+	enabled = false
+}
+
+processResources {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	from(rootProject.file('version.properties'))
+}
+
+tasks.withType(JavaCompile).configureEach {
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
+	options.compilerArgs.remove('-Werror')
+}

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<header th:fragment="header">
+    <nav>
+        <div class="logo" th:text="${siteName}">ThymeLab</div>
+        <ul class="nav-links">
+            <li th:each="item : ${menuItems}" th:classappend="${req.requestURI == item.url ? 'active' : ''}">
+                <a th:href="@{${item.url}}" th:text="${item.name}">Menu Item</a>
+            </li>
+        </ul>
+    </nav>
+</header>
+</html> 

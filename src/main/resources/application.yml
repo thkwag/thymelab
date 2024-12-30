@@ -1,0 +1,70 @@
+spring:
+  application:
+    title: ThymeLab
+    version: v1.0.0
+  thymeleaf:
+    cache: false
+    check-template-location: false
+  web:
+    resources:
+      cache:
+        period: 0
+
+  devtools:
+    livereload:
+      enabled: false
+    restart:
+      enabled: false
+      exclude: default/**,static/**
+  output:
+    ansi:
+      enabled: always
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+
+logging:
+  level:
+    com.github.thkwag.thymelab: DEBUG
+    org.springframework: INFO
+    org.springframework.web.socket: WARN
+    org.springframework.messaging: WARN
+    org.springframework.security: WARN
+  pattern:
+    console: "%clr(%-5p) %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"
+  charset:
+    console: UTF-8
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,env,info,loggers
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      simple:
+        enabled: true
+  env:
+    show-values: always
+  configprops:
+    show-values: always
+  info:
+    env:
+      enabled: true
+  security:
+    enabled: false
+
+watch:
+  directory:
+    static: classpath:/default/static/
+    templates: classpath:/default/templates/
+    thymeleaf-data: classpath:/default/thymelab/data/
+
+
