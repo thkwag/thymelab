@@ -23,7 +23,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        ref: main
+        ref: master
         fetch-depth: 0
 
     - name: Setup Git
@@ -106,7 +106,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        ref: main
+        ref: master
         fetch-depth: 0
 
     - name: Set up JDK
@@ -145,7 +145,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        ref: main
+        ref: master
 
     - name: Create examples archive
       run: |
@@ -171,7 +171,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        ref: main
+        ref: master
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -179,7 +179,7 @@ jobs:
       run: |
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-        git checkout main
+        git checkout master
 
     - name: Get Changes
       id: get_changes
